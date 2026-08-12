@@ -9,6 +9,7 @@ import {
   type DeadStockResponse,
   type LeadsResponse,
   type OrderRow,
+  type OrdersInsight,
   type ProductMovers,
   type ProductRow,
   type Rankings,
@@ -102,8 +103,13 @@ function App() {
   const [leads, setLeads] = useState<LeadsResponse | null>(null);
   const [deadStock, setDeadStock] = useState<DeadStockResponse | null>(null);
   const [movers, setMovers] = useState<ProductMovers | null>(null);
+  const [ordersInsight, setOrdersInsight] = useState<OrdersInsight | null>(null);
   const [segmentFilter, setSegmentFilter] = useState("todos");
   const [tableSort, setTableSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
+  const [orderSort, setOrderSort] = useState<{ key: string; order: "asc" | "desc" }>({
+    key: "date",
+    order: "desc",
+  });
   const [intelLoading, setIntelLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -125,7 +131,7 @@ function App() {
       const results = await Promise.allSettled([
         api.dashboard(days),
         api.rankings(days),
-        api.orders(200),
+        api.orders(500, { days, sort: "date", order: "desc" }),
         api.products(200),
         api.customers(200),
         api.sellers(),
@@ -213,13 +219,64 @@ function App() {
     }
   }, [active, loadIntelligence]);
 
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter((x) =>
-        [x.number, x.customerName, x.sellerName, x.status].join(" ").toLowerCase().includes(q.toLowerCase())
-      ),
-    [orders, q]
-  );
+  useEffect(() => {
+    if (active !== "Pedidos" || !api.configured) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [list, insight] = await Promise.all([
+          api.orders(1000, { days, sort: orderSort.key, order: orderSort.order }),
+          api.ordersInsight(days, 8),
+        ]);
+        if (!cancelled) {
+          setOrders(list);
+          setOrdersInsight(insight);
+        }
+      } catch {
+        /* keep previous */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [active, days, orderSort]);
+
+  const filteredOrders = useMemo(() => {
+    let rows = orders.filter((x) =>
+      [x.number, x.customerName, x.sellerName, x.status].join(" ").toLowerCase().includes(q.toLowerCase())
+    );
+    // Client-side sort for name columns (server sorts date/total/status/number)
+    const key = orderSort.key;
+    const asc = orderSort.order === "asc";
+    if (key === "customerName" || key === "sellerName" || key === "status") {
+      rows = [...rows].sort((a, b) => {
+        const av = String(
+          key === "customerName" ? a.customerName : key === "sellerName" ? a.sellerName : a.status
+        ).toLowerCase();
+        const bv = String(
+          key === "customerName" ? b.customerName : key === "sellerName" ? b.sellerName : b.status
+        ).toLowerCase();
+        if (av < bv) return asc ? -1 : 1;
+        if (av > bv) return asc ? 1 : -1;
+        return 0;
+      });
+    } else if (key === "total") {
+      rows = [...rows].sort((a, b) => (asc ? a.total - b.total : b.total - a.total));
+    } else if (key === "date") {
+      rows = [...rows].sort((a, b) => {
+        const at = a.date ? new Date(a.date).getTime() : 0;
+        const bt = b.date ? new Date(b.date).getTime() : 0;
+        return asc ? at - bt : bt - at;
+      });
+    } else if (key === "number") {
+      rows = [...rows].sort((a, b) => {
+        const an = Number(a.number) || 0;
+        const bn = Number(b.number) || 0;
+        return asc ? an - bn : bn - an;
+      });
+    }
+    return rows;
+  }, [orders, q, orderSort]);
 
   const lastSync = useMemo(() => {
     const times = syncStates.map((x) => x.lastSuccessAt).filter(Boolean) as string[];
@@ -277,9 +334,21 @@ function App() {
     });
   };
 
+  const toggleOrderSort = (key: string) => {
+    setOrderSort((prev) => {
+      if (prev.key !== key) return { key, order: key === "date" || key === "total" ? "desc" : "asc" };
+      return { key, order: prev.order === "asc" ? "desc" : "asc" };
+    });
+  };
+
   const sortMark = (key: string) => {
     if (!tableSort || tableSort.key !== key) return "";
     return tableSort.order === "asc" ? " ↑" : " ↓";
+  };
+
+  const orderSortMark = (key: string) => {
+    if (orderSort.key !== key) return "";
+    return orderSort.order === "asc" ? " ↑" : " ↓";
   };
 
   const leadRows = useMemo(() => {
@@ -510,35 +579,125 @@ function App() {
           )}
 
           {active === "Pedidos" && (
-            <article className="card table">
-              <h2>Pedidos</h2>
-              <p>{num(filteredOrders.length)} registros</p>
-              <div className="scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      {["Pedido", "Cliente", "Vendedor", "Status", "Data", "Valor"].map((x) => (
-                        <th key={x}>{x}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredOrders.map((r) => (
-                      <tr key={r.id}>
-                        <td>#{r.number}</td>
-                        <td>{r.customerName}</td>
-                        <td>{r.sellerName}</td>
-                        <td>
-                          <mark>{statusLabel(r.status)}</mark>
-                        </td>
-                        <td>{r.date ? new Date(r.date).toLocaleDateString("pt-BR") : "—"}</td>
-                        <td>{moneyExact(r.total)}</td>
+            <>
+              <section className="kpis">
+                <K n="Faturamento do período" v={money(ordersInsight?.kpis.revenue || 0)} d={`${num(ordersInsight?.kpis.orders || 0)} pedidos`} />
+                <K n="Ticket médio" v={moneyExact(ordersInsight?.kpis.ticketAverage || 0)} d="valor médio" c="green" />
+                <K n="Maior pedido" v={moneyExact(ordersInsight?.kpis.maxOrder || 0)} d="no período" c="blue" />
+                <K n="Menor pedido" v={moneyExact(ordersInsight?.kpis.minOrder || 0)} d="> R$ 0" c="orange" />
+                <K n="Pedidos" v={num(ordersInsight?.kpis.orders || filteredOrders.length)} d={days ? `${days} dias` : "tudo"} c="violet" />
+              </section>
+              <section className="grid lower">
+                <article className="card">
+                  <h2>Maiores pedidos</h2>
+                  <p>Por valor no período</p>
+                  <Rank
+                    rows={(ordersInsight?.biggestOrders || []).map((o) => [
+                      `#${o.number} · ${o.customerName}`,
+                      o.date ? new Date(o.date).toLocaleDateString("pt-BR") : "—",
+                      moneyExact(o.total),
+                    ])}
+                  />
+                </article>
+                <article className="card">
+                  <h2>Menores pedidos</h2>
+                  <p>Por valor no período</p>
+                  <Rank
+                    rows={(ordersInsight?.smallestOrders || []).map((o) => [
+                      `#${o.number} · ${o.customerName}`,
+                      o.date ? new Date(o.date).toLocaleDateString("pt-BR") : "—",
+                      moneyExact(o.total),
+                    ])}
+                  />
+                </article>
+              </section>
+              <section className="grid lower three">
+                <article className="card">
+                  <h2>Clientes que mais pediram</h2>
+                  <p>Quantidade de pedidos</p>
+                  <Rank
+                    rows={(ordersInsight?.topCustomersByOrders || []).map((c) => [
+                      c.name,
+                      `${num(c.orders)} pedidos`,
+                      money(c.revenue),
+                    ])}
+                  />
+                </article>
+                <article className="card">
+                  <h2>Clientes com maior valor</h2>
+                  <p>Faturamento no período</p>
+                  <Rank
+                    rows={(ordersInsight?.topCustomersByRevenue || []).map((c) => [
+                      c.name,
+                      `${num(c.orders)} pedidos`,
+                      money(c.revenue),
+                    ])}
+                  />
+                </article>
+                <article className="card">
+                  <h2>Há quanto tempo não pedem</h2>
+                  <p>Clientes mais parados (histórico)</p>
+                  <Rank
+                    rows={(ordersInsight?.idleCustomers || []).map((c) => [
+                      c.name,
+                      c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString("pt-BR") : "—",
+                      `${num(c.daysSinceLastOrder)} dias`,
+                    ])}
+                  />
+                </article>
+              </section>
+              <article className="card table">
+                <h2>Pedidos</h2>
+                <p>
+                  {num(filteredOrders.length)} registros no filtro {days ? `de ${days} dias` : "completo"} — clique
+                  nas colunas para ordenar
+                </p>
+                <div className="scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        {(
+                          [
+                            ["number", "Pedido"],
+                            ["customerName", "Cliente"],
+                            ["sellerName", "Vendedor"],
+                            ["status", "Status"],
+                            ["date", "Data"],
+                            ["total", "Valor"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <th key={key}>
+                            <button type="button" className="th-sort" onClick={() => toggleOrderSort(key)}>
+                              {label}
+                              {orderSortMark(key)}
+                            </button>
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </article>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((r) => (
+                        <tr key={r.id}>
+                          <td>#{r.number}</td>
+                          <td>{r.customerName}</td>
+                          <td>{r.sellerName}</td>
+                          <td>
+                            <mark>{statusLabel(r.status)}</mark>
+                          </td>
+                          <td>{r.date ? new Date(r.date).toLocaleDateString("pt-BR") : "—"}</td>
+                          <td>{moneyExact(r.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!filteredOrders.length && (
+                    <p className="empty pad">
+                      Nenhum pedido no período selecionado. Use “Tudo” ou sincronize pedidos recentes.
+                    </p>
+                  )}
+                </div>
+              </article>
+            </>
           )}
 
           {active === "Produtos" && (

@@ -119,6 +119,22 @@ export type ProductMovers = {
   slow: { id: string | null; name: string; code: string | null; quantity: number; revenue: number }[];
 };
 
+export type OrdersInsight = {
+  periodDays: number;
+  kpis: {
+    orders: number;
+    revenue: number;
+    ticketAverage: number;
+    maxOrder: number;
+    minOrder: number;
+  };
+  biggestOrders: OrderRow[];
+  smallestOrders: OrderRow[];
+  topCustomersByOrders: { id: string; name: string; orders: number; revenue: number }[];
+  topCustomersByRevenue: { id: string; name: string; orders: number; revenue: number }[];
+  idleCustomers: { id: string; name: string; lastOrderAt: string | null; daysSinceLastOrder: number }[];
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL não configurada");
   if (!API_KEY) throw new Error("VITE_BI_API_KEY não configurada");
@@ -161,7 +177,15 @@ export const api = {
   configured: Boolean(API_URL && API_KEY),
   dashboard: (days: number) => request<Dashboard>(`/api/v1/dashboard?days=${days}`),
   rankings: (days: number) => request<Rankings>(`/api/v1/rankings?days=${days}`),
-  orders: (limit = 50) => request<OrderRow[]>(`/api/v1/orders?limit=${limit}`),
+  orders: (limit = 50, opts?: { days?: number; sort?: string; order?: "asc" | "desc" }) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (opts?.days != null) params.set("days", String(opts.days));
+    if (opts?.sort) params.set("sort", opts.sort);
+    if (opts?.order) params.set("order", opts.order);
+    return request<OrderRow[]>(`/api/v1/orders?${params}`);
+  },
+  ordersInsight: (days: number, limit = 10) =>
+    requestRetry<OrdersInsight>(`/api/v1/orders/insight?days=${days}&limit=${limit}`),
   products: (limit = 50) => request<ProductRow[]>(`/api/v1/products?limit=${limit}`),
   customers: (limit = 50) => request<CustomerRow[]>(`/api/v1/customers?limit=${limit}`),
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
