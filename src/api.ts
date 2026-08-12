@@ -71,12 +71,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers || {}),
     },
   });
-  if (!res.ok) {
+  if (!res.ok && res.status !== 202) {
     const text = await res.text();
     throw new Error(text || `${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const api = {
   configured: Boolean(API_URL && API_KEY),
@@ -88,5 +90,28 @@ export const api = {
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
   syncStatus: () => request<SyncState[]>(`/api/v1/sync/status`),
   sync: (resource = "all", full = false) =>
-    request(`/api/v1/sync/${resource}?full=${full ? "true" : "false"}`, { method: "POST" }),
+    request<{ status: string; message?: string }>(`/api/v1/sync/${resource}?full=${full ? "true" : "false"}`, {
+      method: "POST",
+    }),
+  /** Starts sync then polls until no resource is "running". */
+  syncAndWait: async (
+    resource = "all",
+    full = false,
+    onProgress?: (states: SyncState[]) => void,
+    opts?: { intervalMs?: number; maxMs?: number }
+  ) => {
+    await api.sync(resource, full);
+    const intervalMs = opts?.intervalMs ?? 5000;
+    const maxMs = opts?.maxMs ?? 45 * 60 * 1000;
+    const started = Date.now();
+    // Give backend a moment to mark SyncState as running
+    await sleep(1500);
+    while (Date.now() - started < maxMs) {
+      const states = await api.syncStatus();
+      onProgress?.(states);
+      if (!states.some((s) => s.status === "running")) return states;
+      await sleep(intervalMs);
+    }
+    throw new Error("Sync ainda em andamento (timeout de acompanhamento). Veja Status da sincronização.");
+  },
 };

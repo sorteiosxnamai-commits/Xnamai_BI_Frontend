@@ -110,19 +110,19 @@ function App() {
   }, [days]);
 
   const runSync = useCallback(async (full = false, silent = false) => {
-    if (!api.configured) return;
+    if (!api.configured || syncing) return;
     setSyncing(true);
     try {
-      if (!silent) notify(full ? "Primeira carga em andamento…" : "Sincronização incremental…");
-      await api.sync("all", full);
-      if (!silent) notify(full ? "Primeira carga concluída." : "Dados novos sincronizados.");
+      if (!silent) notify(full ? "Primeira carga iniciada em background…" : "Sincronização iniciada…");
+      await api.syncAndWait("all", full, (st) => setSyncStates(st));
+      if (!silent) notify(full ? "Primeira carga concluída." : "Dados sincronizados.");
       await load();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Falha na sincronização");
     } finally {
       setSyncing(false);
     }
-  }, [load]);
+  }, [load, syncing]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +134,9 @@ function App() {
         notify("Base vazia — iniciando primeira carga automática…");
         setSyncing(true);
         try {
-          await api.sync("all", true);
+          await api.syncAndWait("all", true, (st) => {
+            if (!cancelled) setSyncStates(st);
+          });
           if (!cancelled) {
             notify("Primeira carga concluída.");
             await load();
