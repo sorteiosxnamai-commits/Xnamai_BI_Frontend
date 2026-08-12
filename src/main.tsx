@@ -334,10 +334,17 @@ function App() {
               Sincronizando com o Mercos… {syncProgress || "iniciando"}
             </div>
           )}
-          {!syncing && !loading && (k?.customers || 0) > 0 && orders.length === 0 && (
+          {!syncing && !loading && (k?.customersTotal || customers.length) > 0 && (k?.orders || 0) === 0 && (
             <div className="banner">
-              Clientes no banco ({num(k?.customers || 0)}), mas pedidos/produtos ainda não sincronizaram. Use
-              Sincronizar (incremental) ou espere o scheduler.
+              Clientes no banco, mas pedidos do período ainda não aparecem. A sync de pedidos está incompleta
+              (histórico antigo). Clique em <b>Sincronizar</b> e depois use o filtro <b>Tudo</b> se quiser ver o
+              histórico já importado.
+              <button onClick={() => void runSync(false)}>Sincronizar pedidos</button>
+            </div>
+          )}
+          {!syncing && !loading && (k?.customers || 0) > 0 && orders.length === 0 && (k?.orders || 0) > 0 && (
+            <div className="banner">
+              Há faturamento no período, mas a lista recente ainda não carregou. Tente de novo em alguns segundos.
             </div>
           )}
           {emptyBase && !syncing && !loading && !error && (

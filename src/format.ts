@@ -9,12 +9,14 @@ export const num = (n: number) => (n || 0).toLocaleString("pt-BR");
 export const pct = (n: number) => `${n > 0 ? "+" : ""}${(n || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 
 export const statusLabel = (s: string) => {
-  const x = (s || "").toLowerCase();
+  const x = (s || "").toLowerCase().trim();
+  // Mercos v2 pedidos: 0=Cancelado, 1=Orçamento, 2=Pedido
+  if (x === "0" || ["cancelled", "cancelado"].includes(x)) return "Cancelado";
+  if (x === "1" || ["orcamento", "orçamento", "budget", "quote", "pending", "pendente"].includes(x)) return "Orçamento";
+  if (x === "2" || ["pedido", "order"].includes(x)) return "Pedido";
   if (["4", "delivered", "entregue"].includes(x)) return "Entregue";
-  if (["3", "shipped", "em trânsito", "em transito"].includes(x)) return "Em trânsito";
-  if (["2", "processing", "processando"].includes(x)) return "Processando";
-  if (["1", "pending", "pendente"].includes(x)) return "Pendente";
-  if (["5", "cancelled", "cancelado"].includes(x)) return "Cancelado";
+  if (["3", "shipped", "em trânsito", "em transito", "processing", "processando"].includes(x)) return "Em trânsito";
+  if (x === "5") return "Cancelado";
   return s || "—";
 };
 
