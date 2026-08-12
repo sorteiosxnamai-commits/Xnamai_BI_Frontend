@@ -138,25 +138,38 @@ export type OrdersInsight = {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL não configurada");
   if (!API_KEY) throw new Error("VITE_BI_API_KEY não configurada");
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "X-API-Key": API_KEY,
-      ...(init?.headers || {}),
-    },
-  });
-  if (!res.ok && res.status !== 202) {
-    const text = await res.text();
-    throw new Error(text || `${res.status} ${res.statusText}`);
+  const ctrl = new AbortController();
+  const ms = 25000;
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      signal: init?.signal || ctrl.signal,
+      headers: {
+        "X-API-Key": API_KEY,
+        ...(init?.headers || {}),
+      },
+    });
+    if (!res.ok && res.status !== 202) {
+      const text = await res.text();
+      throw new Error(text || `${res.status} ${res.statusText}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Tempo esgotado ao falar com o backend (25s). Tente de novo.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<T>;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function isTransient(err: unknown) {
   const msg = err instanceof Error ? err.message : String(err);
-  return /502|503|504|Failed to fetch|NetworkError|ERR_FAILED|Unexpected token|<!DOCTYPE|Bad Gateway/i.test(msg);
+  return /502|503|504|Failed to fetch|NetworkError|ERR_FAILED|Unexpected token|<!DOCTYPE|Bad Gateway|Tempo esgotado|AbortError/i.test(msg);
 }
 
 async function requestRetry<T>(path: string, init?: RequestInit, retries = 8): Promise<T> {

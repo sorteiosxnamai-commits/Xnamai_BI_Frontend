@@ -87,7 +87,8 @@ function Rank({ rows }: { rows: string[][] }) {
 
 function App() {
   const [active, setActive] = useState(menu[0]);
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(0); // Tudo — histórico já importado; 30/90 dias só após sync chegar no presente
+
   const [q, setQ] = useState("");
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
@@ -312,7 +313,14 @@ function App() {
     })
     .join(", ");
 
-  const emptyBase = needsFirstLoad(syncStates, orders.length, products.length, customers.length);
+  const ordersSync = useMemo(() => syncStates.find((s) => s.resource === "orders"), [syncStates]);
+  const ordersCatchingUp = Boolean(
+    ordersSync &&
+      (ordersSync.status === "interrupted" ||
+        ordersSync.status === "partial" ||
+        ordersSync.status === "running" ||
+        (ordersSync.cursor && !String(ordersSync.cursor).startsWith("2026")))
+  );
   const syncProgress = syncStates
     .filter((s) => s.status === "running" || (s.records || 0) > 0)
     .map((s) => `${s.resource}: ${s.status}${s.records ? ` (${num(s.records)})` : ""}`)
@@ -390,7 +398,11 @@ function App() {
           <p>
             <i />
             Mercos {error && !dashboard ? "offline" : "conectado"}
-            <small>Atualizado {relativeTime(lastSync)}</small>
+            <small>
+              {ordersSync?.cursor
+                ? `Pedidos até ${String(ordersSync.cursor).slice(0, 10)} · ${ordersSync.status}`
+                : `Atualizado ${relativeTime(lastSync)}`}
+            </small>
           </p>
           <div>
             <b>PT</b>
@@ -437,10 +449,19 @@ function App() {
           )}
           {!syncing && !loading && (k?.customersTotal || customers.length) > 0 && (k?.orders || 0) === 0 && (
             <div className="banner">
-              Clientes no banco, mas pedidos do período ainda não aparecem. A sync de pedidos está incompleta
-              (histórico antigo). Clique em <b>Sincronizar</b> e depois use o filtro <b>Tudo</b> se quiser ver o
-              histórico já importado.
-              <button onClick={() => void runSync(false)}>Sincronizar pedidos</button>
+              {days > 0
+                ? `Sem pedidos nos últimos ${days} dias. A sync ainda está no histórico (${
+                    ordersSync?.cursor ? String(ordersSync.cursor).slice(0, 10) : "antigo"
+                  }). Use o filtro Tudo para ver o que já entrou, ou Sincronizar para avançar até 2026.`
+                : "Clientes no banco, mas ainda sem pedidos válidos no histórico importado. Continue a sync."}
+              <button onClick={() => setDays(0)}>Ver Tudo</button>
+              <button onClick={() => void runSync(false)}>Sincronizar</button>
+            </div>
+          )}
+          {!syncing && !loading && days > 0 && ordersCatchingUp && (k?.orders || 0) === 0 && (
+            <div className="banner">
+              Visão geral em 30/90 dias fica zerada até a sync de pedidos chegar no presente (agora em{" "}
+              {ordersSync?.cursor ? String(ordersSync.cursor).slice(0, 10) : "…"}).
             </div>
           )}
           {!syncing && !loading && (k?.customers || 0) > 0 && orders.length === 0 && (k?.orders || 0) > 0 && (
