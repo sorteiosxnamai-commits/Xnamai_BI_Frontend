@@ -103,6 +103,8 @@ function App() {
   const [deadStock, setDeadStock] = useState<DeadStockResponse | null>(null);
   const [movers, setMovers] = useState<ProductMovers | null>(null);
   const [segmentFilter, setSegmentFilter] = useState("todos");
+  const [tableSort, setTableSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
+  const [intelLoading, setIntelLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const notify = (x: string) => {
@@ -162,15 +164,25 @@ function App() {
 
   const loadIntelligence = useCallback(async () => {
     if (!api.configured) return;
-    const [intel, leadData, dead] = await Promise.allSettled([
-      api.intelligence(90, 45),
-      api.leads(90, 45),
-      api.deadStock(90),
-    ]);
-    if (intel.status === "fulfilled") setIntelligence(intel.value);
-    if (leadData.status === "fulfilled") setLeads(leadData.value);
-    if (dead.status === "fulfilled") setDeadStock(dead.value);
-  }, []);
+    setIntelLoading(true);
+    try {
+      const [intel, leadData, dead] = await Promise.allSettled([
+        api.intelligence(90, 90, {
+          limit: 1000,
+          segment: segmentFilter,
+          sort: tableSort?.key,
+          order: tableSort?.order,
+        }),
+        api.leads(90, 90),
+        api.deadStock(90),
+      ]);
+      if (intel.status === "fulfilled") setIntelligence(intel.value);
+      if (leadData.status === "fulfilled") setLeads(leadData.value);
+      if (dead.status === "fulfilled") setDeadStock(dead.value);
+    } finally {
+      setIntelLoading(false);
+    }
+  }, [segmentFilter, tableSort]);
 
   const runSync = useCallback(async (full = false, silent = false) => {
     if (!api.configured || syncing) return;
@@ -249,15 +261,26 @@ function App() {
 
   const classifiedRows = useMemo(() => {
     const rows = intelligence?.customers || [];
-    return rows.filter((c) => {
-      if (segmentFilter !== "todos" && c.segment !== segmentFilter) return false;
-      if (!q.trim()) return true;
-      return [c.name, c.city, c.state, c.email, c.phone, c.segment, c.potential]
+    if (!q.trim()) return rows;
+    return rows.filter((c) =>
+      [c.name, c.city, c.state, c.email, c.phone, c.segment, c.potential]
         .join(" ")
         .toLowerCase()
-        .includes(q.toLowerCase());
+        .includes(q.toLowerCase())
+    );
+  }, [intelligence, q]);
+
+  const toggleSort = (key: string) => {
+    setTableSort((prev) => {
+      if (!prev || prev.key !== key) return { key, order: key === "daysSinceLastOrder" ? "asc" : "desc" };
+      return { key, order: prev.order === "asc" ? "desc" : "asc" };
     });
-  }, [intelligence, segmentFilter, q]);
+  };
+
+  const sortMark = (key: string) => {
+    if (!tableSort || tableSort.key !== key) return "";
+    return tableSort.order === "asc" ? " ↑" : " ↓";
+  };
 
   const leadRows = useMemo(() => {
     const rows = leads?.leads || [];
@@ -575,16 +598,23 @@ function App() {
           {active === "Clientes × pedidos" && (
             <>
               <section className="kpis">
-                <K n="Ativos" v={num(intelligence?.summary.ativo || 0)} d="compraram recente" c="green" />
-                <K n="Em risco" v={num(intelligence?.summary.em_risco || 0)} d="esfriando" c="orange" />
-                <K n="Recuperar" v={num(intelligence?.summary.recuperar || 0)} d="pararam de comprar" c="red" />
-                <K n="Leads novos" v={num(intelligence?.summary.lead_novo || 0)} d="nunca compraram" c="blue" />
+                <K n="Ativos" v={num(intelligence?.summary.ativo || 0)} d="compraram nos últimos 3 meses" c="green" />
+                <K
+                  n="Em risco"
+                  v={num((intelligence?.summary.em_risco || 0) + (intelligence?.summary.recuperar || 0))}
+                  d="sem compra há 3+ meses"
+                  c="orange"
+                />
+                <K n="Recuperar" v={num(intelligence?.summary.recuperar || 0)} d="parados há 6+ meses" c="red" />
+                <K n="Leads novos" v={num(intelligence?.summary.lead_novo || 0)} d="sem histórico ou 1ªs compras" c="blue" />
               </section>
               <article className="card table">
                 <h2>Clientes classificados</h2>
                 <p>
-                  Matriz cliente × pedidos (inativo após {intelligence?.inactiveDays || 90} dias; risco após{" "}
-                  {intelligence?.riskDays || 45})
+                  Ativo = compra ≤ {intelligence?.inactiveDays || 90} dias · Em risco = 91+ dias · Recuperar ={" "}
+                  {(intelligence?.inactiveDays || 90) * 2}+ dias · Lead novo = primeiros pedidos recentes
+                  {intelLoading ? " · atualizando…" : ""}
+                  {intelligence?.matched != null ? ` · ${num(intelligence.matched)} nesta aba` : ""}
                 </p>
                 <div className="toolbar" style={{ marginTop: 10 }}>
                   <div>
@@ -603,18 +633,25 @@ function App() {
                   <table>
                     <thead>
                       <tr>
-                        {[
-                          "Cliente",
-                          "Segmento",
-                          "Potencial",
-                          "Pedidos",
-                          "Faturamento",
-                          "Ticket",
-                          "Última compra",
-                          "Dias parado",
-                          "Contato",
-                        ].map((x) => (
-                          <th key={x}>{x}</th>
+                        {(
+                          [
+                            ["name", "Cliente"],
+                            ["segment", "Segmento"],
+                            ["potential", "Potencial"],
+                            ["orders", "Pedidos"],
+                            ["revenue", "Faturamento"],
+                            ["ticketAverage", "Ticket"],
+                            ["lastOrderAt", "Última compra"],
+                            ["daysSinceLastOrder", "Dias parado"],
+                            ["email", "Contato"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <th key={key}>
+                            <button type="button" className="th-sort" onClick={() => toggleSort(key)}>
+                              {label}
+                              {sortMark(key)}
+                            </button>
+                          </th>
                         ))}
                       </tr>
                     </thead>
@@ -643,8 +680,16 @@ function App() {
                       ))}
                     </tbody>
                   </table>
-                  {!classifiedRows.length && (
-                    <p className="empty pad">Sem clientes classificados — sincronize pedidos.</p>
+                  {!classifiedRows.length && !intelLoading && (
+                    <p className="empty pad">
+                      {segmentFilter === "ativo"
+                        ? "Nenhum ativo nos últimos 3 meses — sincronize pedidos recentes."
+                        : segmentFilter === "em_risco"
+                          ? "Nenhum cliente sem compra há 3+ meses nesta base."
+                          : segmentFilter === "lead_novo"
+                            ? "Nenhum lead novo encontrado."
+                            : "Sem clientes classificados — sincronize pedidos."}
+                    </p>
                   )}
                 </div>
               </article>

@@ -82,8 +82,10 @@ export type ClassifiedCustomer = {
 export type CustomerIntelligence = {
   inactiveDays: number;
   riskDays: number;
+  segment?: string;
   summary: Record<string, number>;
   total: number;
+  matched?: number;
   customers: ClassifiedCustomer[];
 };
 
@@ -164,11 +166,23 @@ export const api = {
   customers: (limit = 50) => request<CustomerRow[]>(`/api/v1/customers?limit=${limit}`),
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
   syncStatus: () => requestRetry<SyncState[]>(`/api/v1/sync/status`),
-  intelligence: (inactiveDays = 90, riskDays = 45) =>
-    requestRetry<CustomerIntelligence>(
-      `/api/v1/intelligence/customers?inactive_days=${inactiveDays}&risk_days=${riskDays}&limit=800`
-    ),
-  leads: (inactiveDays = 90, riskDays = 45) =>
+  intelligence: (
+    inactiveDays = 90,
+    riskDays = 90,
+    opts?: { limit?: number; segment?: string; sort?: string; order?: "asc" | "desc" }
+  ) => {
+    const limit = opts?.limit ?? 800;
+    const params = new URLSearchParams({
+      inactive_days: String(inactiveDays),
+      risk_days: String(riskDays),
+      limit: String(limit),
+    });
+    if (opts?.segment && opts.segment !== "todos") params.set("segment", opts.segment);
+    if (opts?.sort) params.set("sort", opts.sort);
+    if (opts?.order) params.set("order", opts.order);
+    return requestRetry<CustomerIntelligence>(`/api/v1/intelligence/customers?${params}`);
+  },
+  leads: (inactiveDays = 90, riskDays = 90) =>
     requestRetry<LeadsResponse>(
       `/api/v1/intelligence/leads?inactive_days=${inactiveDays}&risk_days=${riskDays}&limit=300`
     ),
