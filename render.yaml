@@ -4,5 +4,7 @@ services:
     runtime: docker
     healthCheckPath: /
     envVars:
-      - key: NEXT_PUBLIC_BI_API_URL
+      - key: VITE_BI_API_URL
+        value: https://xnamai-bi-backend.onrender.com
+      - key: VITE_BI_API_KEY
         sync: false
