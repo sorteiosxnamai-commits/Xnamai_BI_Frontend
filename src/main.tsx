@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   api,
@@ -104,7 +104,6 @@ function App() {
   const [movers, setMovers] = useState<ProductMovers | null>(null);
   const [segmentFilter, setSegmentFilter] = useState("todos");
   const [syncing, setSyncing] = useState(false);
-  const autoFirstLoadDone = useRef(false);
 
   const notify = (x: string) => {
     setToast(x);
@@ -120,7 +119,7 @@ function App() {
     setLoading(true);
     setError("");
     try {
-      // Core endpoints only — heavy intelligence loads on demand per screen
+      // Read-only core first (no long retries). Heavy endpoints load after / on demand.
       const results = await Promise.allSettled([
         api.dashboard(days),
         api.rankings(days),
@@ -129,7 +128,6 @@ function App() {
         api.customers(200),
         api.sellers(),
         api.syncStatus(),
-        api.productMovers(days || 365),
       ]);
       const value = <T,>(i: number) => (results[i].status === "fulfilled" ? (results[i] as PromiseFulfilledResult<T>).value : null);
       const d = value<Dashboard>(0);
@@ -139,7 +137,6 @@ function App() {
       const c = value<CustomerRow[]>(4) || [];
       const s = value<SellerRow[]>(5) || [];
       const st = value<SyncState[]>(6) || [];
-      const mov = value<ProductMovers>(7);
       if (d) setDashboard(d);
       if (r) setRankings(r);
       setOrders(o);
@@ -147,15 +144,13 @@ function App() {
       setCustomers(c);
       setSellers(s);
       setSyncStates(st);
-      if (mov) setMovers(mov);
       const failed = results.filter((x) => x.status === "rejected").length;
       if (failed === results.length) {
         setError("Backend indisponível no momento (rede/deploy). Tente de novo em alguns segundos.");
         return null;
       }
-      if (failed) {
-        setError(""); // partial data is fine
-      }
+      // Movers in background — must not block the overview KPIs
+      void api.productMovers(days || 365).then(setMovers).catch(() => undefined);
       return { syncStates: st, orders: o.length, products: p.length, customers: c.length };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar dados");
@@ -193,34 +188,7 @@ function App() {
   }, [load, syncing]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const result = await load();
-      if (cancelled || !result || autoFirstLoadDone.current) return;
-      if (needsFirstLoad(result.syncStates, result.orders, result.products, result.customers)) {
-        autoFirstLoadDone.current = true;
-        notify("Base vazia — iniciando primeira carga automática…");
-        setSyncing(true);
-        try {
-          await api.syncAndWait("all", true, (st) => {
-            if (!cancelled) setSyncStates(st);
-          });
-          if (!cancelled) {
-            notify("Primeira carga concluída.");
-            await load();
-          }
-        } catch (e) {
-          if (!cancelled) notify(e instanceof Error ? e.message : "Falha na primeira carga");
-        } finally {
-          if (!cancelled) setSyncing(false);
-        }
-      } else {
-        autoFirstLoadDone.current = true;
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void load();
   }, [load]);
 
   useEffect(() => {
@@ -374,7 +342,7 @@ function App() {
           )}
           {emptyBase && !syncing && !loading && !error && (
             <div className="banner">
-              Base ainda vazia. A primeira carga roda automaticamente; você também pode disparar manualmente.
+              Base ainda vazia. Use “Primeira carga” quando quiser importar do Mercos — abrir a tela não dispara sync.
               <button onClick={() => void runSync(true)}>Primeira carga</button>
             </div>
           )}
