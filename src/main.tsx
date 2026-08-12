@@ -326,6 +326,15 @@ function App() {
     .filter((s) => s.status === "running" || (s.records || 0) > 0)
     .map((s) => `${s.resource}: ${s.status}${s.records ? ` (${num(s.records)})` : ""}`)
     .join(" · ");
+  const todayOrders = useMemo(() => {
+    const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    return filteredOrders.filter((o) => {
+      if (!o.date) return false;
+      return new Date(o.date).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) === todayKey;
+    });
+  }, [filteredOrders]);
+
+  const today = dashboard?.today;
   const k = dashboard?.kpis;
   const productRank =
     rankings?.products.map((x) => [x.name, `${num(x.quantity)} un.`, money(x.revenue)]) || [];
@@ -509,6 +518,62 @@ function App() {
                 <K n="Compradores no período" v={num(k?.customers || 0)} d={`base ${num(k?.customersTotal || customers.length)}`} c="orange" />
                 <K n="Cancelamentos" v={num(k?.cancellations || 0)} d="—" c="red" />
               </section>
+
+              {active === "Visão geral" && (
+                <section className="card" style={{ marginBottom: 18, padding: "18px 20px" }}>
+                  <h2 style={{ margin: 0 }}>Vendas do dia</h2>
+                  <p style={{ margin: "4px 0 14px", opacity: 0.7 }}>
+                    {today?.date
+                      ? new Date(today.date + "T12:00:00").toLocaleDateString("pt-BR", {
+                          weekday: "long",
+                          day: "2-digit",
+                          month: "long",
+                        })
+                      : "Hoje"}{" "}
+                    · horário de Brasília
+                  </p>
+                  <section className="kpis" style={{ margin: 0 }}>
+                    <K n="Faturamento hoje" v={moneyExact(today?.revenue || 0)} d={`${num(today?.orders || 0)} pedidos`} />
+                    <K n="Pedidos hoje" v={num(today?.orders || 0)} d="confirmados" c="blue" />
+                    <K n="Ticket médio hoje" v={moneyExact(today?.ticketAverage || 0)} d="—" c="green" />
+                    <K n="Compradores hoje" v={num(today?.customers || 0)} d="únicos" c="orange" />
+                  </section>
+                  {!!todayOrders.length && (
+                    <div className="scroll" style={{ marginTop: 12 }}>
+                      <table>
+                        <thead>
+                          <tr>
+                            {["Pedido", "Cliente", "Vendedor", "Status", "Data", "Valor"].map((x) => (
+                              <th key={x}>{x}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {todayOrders.slice(0, 8).map((r) => (
+                            <tr key={`today-${r.id}`}>
+                              <td>#{r.number}</td>
+                              <td>{r.customerName}</td>
+                              <td>{r.sellerName}</td>
+                              <td>
+                                <mark>{statusLabel(r.status)}</mark>
+                              </td>
+                              <td>{r.date ? new Date(r.date).toLocaleString("pt-BR") : "—"}</td>
+                              <td>{moneyExact(r.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {!todayOrders.length && (
+                    <p className="empty" style={{ marginTop: 10 }}>
+                      Nenhum pedido de hoje na amostra carregada
+                      {(today?.orders || 0) > 0 ? ` (API: ${num(today?.orders || 0)} pedidos hoje)` : ""}.
+                    </p>
+                  )}
+                </section>
+              )}
+
               <section className="grid top">
                 <article className="card chart">
                   <h2>Evolução das vendas</h2>
@@ -562,7 +627,7 @@ function App() {
                     <table>
                       <thead>
                         <tr>
-                          {["Pedido", "Cliente", "Vendedor", "Status", "Valor"].map((x) => (
+                          {["Pedido", "Cliente", "Vendedor", "Status", "Data", "Valor"].map((x) => (
                             <th key={x}>{x}</th>
                           ))}
                         </tr>
@@ -576,6 +641,7 @@ function App() {
                             <td>
                               <mark>{statusLabel(r.status)}</mark>
                             </td>
+                            <td>{r.date ? new Date(r.date).toLocaleDateString("pt-BR") : "—"}</td>
                             <td>{moneyExact(r.total)}</td>
                           </tr>
                         ))}

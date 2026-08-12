@@ -13,6 +13,13 @@ export type Dashboard = {
     customersTotal?: number;
     cancellations: number;
   };
+  today?: {
+    date: string;
+    orders: number;
+    revenue: number;
+    ticketAverage: number;
+    customers: number;
+  };
   salesEvolution: { date: string; orders: number; revenue: number }[];
   status: { status: string; orders: number; value: number }[];
 };
