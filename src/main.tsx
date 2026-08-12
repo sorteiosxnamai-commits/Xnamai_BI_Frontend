@@ -321,6 +321,7 @@ function App() {
         ordersSync.status === "running" ||
         (ordersSync.cursor && !String(ordersSync.cursor).startsWith("2026")))
   );
+  const emptyBase = needsFirstLoad(syncStates, orders.length, products.length, customers.length);
   const syncProgress = syncStates
     .filter((s) => s.status === "running" || (s.records || 0) > 0)
     .map((s) => `${s.resource}: ${s.status}${s.records ? ` (${num(s.records)})` : ""}`)
