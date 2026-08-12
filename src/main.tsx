@@ -195,8 +195,17 @@ function App() {
     setSyncing(true);
     try {
       if (!silent) notify(full ? "Primeira carga iniciada em background…" : "Sincronização iniciada…");
-      await api.syncAndWait("all", full, (st) => setSyncStates(st));
-      if (!silent) notify(full ? "Primeira carga concluída." : "Dados sincronizados.");
+      const states = await api.syncAndWait("all", full, (st) => setSyncStates(st));
+      const interrupted = states.some((s) => s.status === "interrupted" || s.status === "partial");
+      if (!silent) {
+        notify(
+          interrupted
+            ? "Sync pausada (serviço reiniciou). Clique Sincronizar de novo em 1–2 min para continuar."
+            : full
+              ? "Primeira carga concluída."
+              : "Dados sincronizados."
+        );
+      }
       await load();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Falha na sincronização");
