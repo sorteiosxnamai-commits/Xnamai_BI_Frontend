@@ -100,18 +100,27 @@ export const api = {
     onProgress?: (states: SyncState[]) => void,
     opts?: { intervalMs?: number; maxMs?: number }
   ) => {
-    await api.sync(resource, full);
+    const started = await api.sync(resource, full);
     const intervalMs = opts?.intervalMs ?? 5000;
     const maxMs = opts?.maxMs ?? 45 * 60 * 1000;
-    const started = Date.now();
-    // Give backend a moment to mark SyncState as running
-    await sleep(1500);
-    while (Date.now() - started < maxMs) {
+    const t0 = Date.now();
+    await sleep(800);
+    while (Date.now() - t0 < maxMs) {
       const states = await api.syncStatus();
       onProgress?.(states);
-      if (!states.some((s) => s.status === "running")) return states;
+      const running = states.some((s) => s.status === "running");
+      if (!running) {
+        const failed = states.filter((s) => s.status === "error" || s.status === "interrupted");
+        if (failed.length && states.every((s) => s.status !== "success" && !(s.records || 0))) {
+          throw new Error(failed[0]?.error || started.message || "Sync falhou");
+        }
+        return states;
+      }
       await sleep(intervalMs);
     }
-    throw new Error("Sync ainda em andamento (timeout de acompanhamento). Veja Status da sincronização.");
+    // Don't fail hard — data may already be partial in DB
+    const states = await api.syncStatus();
+    onProgress?.(states);
+    return states;
   },
 };

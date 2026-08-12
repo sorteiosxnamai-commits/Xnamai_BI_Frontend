@@ -16,9 +16,11 @@ import "./style.css";
 const menu = ["Visão geral", "Vendas", "Pedidos", "Produtos", "Clientes", "Vendedores", "Estoque", "Sincronização"];
 
 function needsFirstLoad(syncStates: SyncState[], orderCount: number, productCount: number, customerCount: number) {
-  if (!syncStates.length) return true;
-  if (syncStates.every((s) => !s.lastSuccessAt)) return true;
-  return orderCount === 0 && productCount === 0 && customerCount === 0;
+  // Already have data in the BI DB — do not auto-trigger another full sync
+  if (orderCount > 0 || productCount > 0 || customerCount > 0) return false;
+  if (syncStates.some((s) => s.status === "running")) return false;
+  if (syncStates.some((s) => (s.records || 0) > 0 || Boolean(s.lastSuccessAt))) return false;
+  return true;
 }
 
 function K({ n, v, d, c = "violet" }: { n: string; v: string; d: string; c?: string }) {
@@ -189,6 +191,10 @@ function App() {
     .join(", ");
 
   const emptyBase = needsFirstLoad(syncStates, orders.length, products.length, customers.length);
+  const syncProgress = syncStates
+    .filter((s) => s.status === "running" || (s.records || 0) > 0)
+    .map((s) => `${s.resource}: ${s.status}${s.records ? ` (${num(s.records)})` : ""}`)
+    .join(" · ");
   const k = dashboard?.kpis;
   const productRank =
     rankings?.products.map((x) => [x.name, `${num(x.quantity)} un.`, money(x.revenue)]) || [];
@@ -259,7 +265,17 @@ function App() {
             </div>
           )}
           {loading && <div className="banner">Carregando dados de produção…</div>}
-          {syncing && <div className="banner">Sincronizando com o Mercos Adaptor…</div>}
+          {syncing && (
+            <div className="banner">
+              Sincronizando com o Mercos… {syncProgress || "iniciando"}
+            </div>
+          )}
+          {!syncing && !loading && (k?.customers || 0) > 0 && orders.length === 0 && (
+            <div className="banner">
+              Clientes no banco ({num(k?.customers || 0)}), mas pedidos/produtos ainda não sincronizaram. Use
+              Sincronizar (incremental) ou espere o scheduler.
+            </div>
+          )}
           {emptyBase && !syncing && !loading && (
             <div className="banner">
               Base ainda vazia. A primeira carga roda automaticamente; você também pode disparar manualmente.
