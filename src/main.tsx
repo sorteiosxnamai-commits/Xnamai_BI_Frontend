@@ -2,9 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client";
 import {
   api,
+  type ClassifiedCustomer,
+  type CustomerIntelligence,
   type CustomerRow,
   type Dashboard,
+  type DeadStockResponse,
+  type LeadsResponse,
   type OrderRow,
+  type ProductMovers,
   type ProductRow,
   type Rankings,
   type SellerRow,
@@ -13,7 +18,31 @@ import {
 import { chartPath, money, moneyExact, num, pct, relativeTime, statusLabel } from "./format";
 import "./style.css";
 
-const menu = ["Visão geral", "Vendas", "Pedidos", "Produtos", "Clientes", "Vendedores", "Estoque", "Sincronização"];
+const menu = [
+  "Visão geral",
+  "Vendas",
+  "Pedidos",
+  "Produtos",
+  "Clientes × pedidos",
+  "Leads a recuperar",
+  "Estoque parado",
+  "Vendedores",
+  "Sincronização",
+];
+
+const segmentLabel: Record<string, string> = {
+  ativo: "Ativo",
+  em_risco: "Em risco",
+  recuperar: "Recuperar",
+  lead_novo: "Lead novo",
+};
+
+const potentialLabel: Record<string, string> = {
+  alto: "Alto",
+  medio: "Médio",
+  descobrir: "Descobrir",
+  manter: "Manter",
+};
 
 function needsFirstLoad(syncStates: SyncState[], orderCount: number, productCount: number, customerCount: number) {
   // Already have data in the BI DB — do not auto-trigger another full sync
@@ -69,6 +98,11 @@ function App() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [sellers, setSellers] = useState<SellerRow[]>([]);
   const [syncStates, setSyncStates] = useState<SyncState[]>([]);
+  const [intelligence, setIntelligence] = useState<CustomerIntelligence | null>(null);
+  const [leads, setLeads] = useState<LeadsResponse | null>(null);
+  const [deadStock, setDeadStock] = useState<DeadStockResponse | null>(null);
+  const [movers, setMovers] = useState<ProductMovers | null>(null);
+  const [segmentFilter, setSegmentFilter] = useState("todos");
   const [syncing, setSyncing] = useState(false);
   const autoFirstLoadDone = useRef(false);
 
@@ -86,14 +120,18 @@ function App() {
     setLoading(true);
     setError("");
     try {
-      const [d, r, o, p, c, s, st] = await Promise.all([
+      const [d, r, o, p, c, s, st, intel, leadData, dead, mov] = await Promise.all([
         api.dashboard(days),
         api.rankings(days),
-        api.orders(80),
-        api.products(80),
-        api.customers(80),
+        api.orders(200),
+        api.products(200),
+        api.customers(200),
         api.sellers(),
         api.syncStatus(),
+        api.intelligence(90, 45),
+        api.leads(90, 45),
+        api.deadStock(90),
+        api.productMovers(days || 365),
       ]);
       setDashboard(d);
       setRankings(r);
@@ -102,6 +140,10 @@ function App() {
       setCustomers(c);
       setSellers(s);
       setSyncStates(st);
+      setIntelligence(intel);
+      setLeads(leadData);
+      setDeadStock(dead);
+      setMovers(mov);
       return { syncStates: st, orders: o.length, products: p.length, customers: c.length };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar dados");
@@ -203,6 +245,26 @@ function App() {
   const sellerRank =
     rankings?.sellers.map((x) => [x.name, `${num(x.orders)} pedidos`, money(x.revenue)]) || [];
 
+  const classifiedRows = useMemo(() => {
+    const rows = intelligence?.customers || [];
+    return rows.filter((c) => {
+      if (segmentFilter !== "todos" && c.segment !== segmentFilter) return false;
+      if (!q.trim()) return true;
+      return [c.name, c.city, c.state, c.email, c.phone, c.segment, c.potential]
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase());
+    });
+  }, [intelligence, segmentFilter, q]);
+
+  const leadRows = useMemo(() => {
+    const rows = leads?.leads || [];
+    if (!q.trim()) return rows;
+    return rows.filter((c) =>
+      [c.name, c.city, c.email, c.phone].join(" ").toLowerCase().includes(q.toLowerCase())
+    );
+  }, [leads, q]);
+
   return (
     <main>
       <aside>
@@ -216,7 +278,7 @@ function App() {
         <nav>
           {menu.map((x, i) => (
             <button key={x} className={x === active ? "active" : ""} onClick={() => setActive(x)}>
-              <i>{["⌂", "↗", "▣", "◇", "◎", "♙", "▤", "↻"][i]}</i>
+              <i>{["⌂", "↗", "▣", "◇", "◎", "⚡", "▤", "♙", "↻"][i]}</i>
               {x}
             </button>
           ))}
@@ -285,13 +347,23 @@ function App() {
 
           <div className="toolbar">
             <div>
-              {[7, 30, 90, 365].map((x) => (
-                <button key={x} className={x === days ? "on" : ""} onClick={() => setDays(x)}>
-                  {x === 365 ? "Este ano" : `${x} dias`}
+              {[
+                [30, "30 dias"],
+                [90, "90 dias"],
+                [365, "1 ano"],
+                [1095, "3 anos"],
+                [0, "Tudo"],
+              ].map(([value, label]) => (
+                <button
+                  key={String(value)}
+                  className={value === days ? "on" : ""}
+                  onClick={() => setDays(Number(value))}
+                >
+                  {label}
                 </button>
               ))}
             </div>
-            <button className="export" onClick={() => notify("Use a API /api/v1/dashboard para exportar.")}>
+            <button className="export" onClick={() => notify("Exporte via API /api/v1/intelligence/*")}>
               ⇩ Exportar
             </button>
           </div>
@@ -302,7 +374,7 @@ function App() {
                 <K n="Faturamento" v={money(k?.revenue || 0)} d={pct(k?.revenueChange || 0)} />
                 <K n="Pedidos" v={num(k?.orders || 0)} d={pct(k?.ordersChange || 0)} c="blue" />
                 <K n="Ticket médio" v={money(k?.ticketAverage || 0)} d="—" c="green" />
-                <K n="Clientes ativos" v={num(k?.customers || 0)} d="—" c="orange" />
+                <K n="Compradores no período" v={num(k?.customers || 0)} d={`base ${num(k?.customersTotal || customers.length)}`} c="orange" />
                 <K n="Cancelamentos" v={num(k?.cancellations || 0)} d="—" c="red" />
               </section>
               <section className="grid top">
@@ -438,62 +510,241 @@ function App() {
           )}
 
           {active === "Produtos" && (
-            <article className="card">
-              <h2>Produtos</h2>
-              <p>Por faturamento no período</p>
-              <Rank rows={productRank} />
-              <div className="scroll" style={{ marginTop: 16 }}>
-                <table>
-                  <thead>
-                    <tr>
-                      {["Código", "Nome", "Estoque", "Preço"].map((x) => (
-                        <th key={x}>{x}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.code}</td>
-                        <td>{p.name}</td>
-                        <td>{num(p.stock)}</td>
-                        <td>{moneyExact(p.price)}</td>
+            <>
+              <section className="grid lower">
+                <article className="card">
+                  <h2>Mais vendidos</h2>
+                  <p>Por faturamento no período</p>
+                  <Rank
+                    rows={(movers?.top || []).map((x) => [
+                      x.name,
+                      `${num(x.quantity)} un.`,
+                      money(x.revenue),
+                    ])}
+                  />
+                </article>
+                <article className="card">
+                  <h2>Menos giro</h2>
+                  <p>Produtos com venda fraca no período</p>
+                  <Rank
+                    rows={(movers?.slow || []).map((x) => [
+                      x.name,
+                      `${num(x.quantity)} un.`,
+                      money(x.revenue),
+                    ])}
+                  />
+                </article>
+              </section>
+              <article className="card table">
+                <h2>Catálogo</h2>
+                <p>Amostra sincronizada</p>
+                <div className="scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        {["Código", "Nome", "Estoque", "Preço"].map((x) => (
+                          <th key={x}>{x}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </article>
+                    </thead>
+                    <tbody>
+                      {products.map((p) => (
+                        <tr key={p.id}>
+                          <td>{p.code}</td>
+                          <td>{p.name}</td>
+                          <td>{num(p.stock)}</td>
+                          <td>{moneyExact(p.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            </>
           )}
 
-          {active === "Clientes" && (
-            <article className="card">
-              <h2>Clientes</h2>
-              <p>Ranking e cadastro</p>
-              <Rank rows={customerRank} />
-              <div className="scroll" style={{ marginTop: 16 }}>
+          {active === "Clientes × pedidos" && (
+            <>
+              <section className="kpis">
+                <K n="Ativos" v={num(intelligence?.summary.ativo || 0)} d="compraram recente" c="green" />
+                <K n="Em risco" v={num(intelligence?.summary.em_risco || 0)} d="esfriando" c="orange" />
+                <K n="Recuperar" v={num(intelligence?.summary.recuperar || 0)} d="pararam de comprar" c="red" />
+                <K n="Leads novos" v={num(intelligence?.summary.lead_novo || 0)} d="nunca compraram" c="blue" />
+              </section>
+              <article className="card table">
+                <h2>Clientes classificados</h2>
+                <p>
+                  Matriz cliente × pedidos (inativo após {intelligence?.inactiveDays || 90} dias; risco após{" "}
+                  {intelligence?.riskDays || 45})
+                </p>
+                <div className="toolbar" style={{ marginTop: 10 }}>
+                  <div>
+                    {["todos", "ativo", "em_risco", "recuperar", "lead_novo"].map((s) => (
+                      <button
+                        key={s}
+                        className={segmentFilter === s ? "on" : ""}
+                        onClick={() => setSegmentFilter(s)}
+                      >
+                        {s === "todos" ? "Todos" : segmentLabel[s] || s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        {[
+                          "Cliente",
+                          "Segmento",
+                          "Potencial",
+                          "Pedidos",
+                          "Faturamento",
+                          "Ticket",
+                          "Última compra",
+                          "Dias parado",
+                          "Contato",
+                        ].map((x) => (
+                          <th key={x}>{x}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classifiedRows.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            {c.name}
+                            <div className="muted">
+                              {[c.city, c.state].filter(Boolean).join("/") || "—"}
+                            </div>
+                          </td>
+                          <td>
+                            <mark>{segmentLabel[c.segment] || c.segment}</mark>
+                          </td>
+                          <td>{potentialLabel[c.potential] || c.potential}</td>
+                          <td>{num(c.orders)}</td>
+                          <td>{moneyExact(c.revenue)}</td>
+                          <td>{moneyExact(c.ticketAverage)}</td>
+                          <td>
+                            {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString("pt-BR") : "—"}
+                          </td>
+                          <td>{c.daysSinceLastOrder ?? "—"}</td>
+                          <td>{c.email || c.phone || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!classifiedRows.length && (
+                    <p className="empty pad">Sem clientes classificados — sincronize pedidos.</p>
+                  )}
+                </div>
+              </article>
+            </>
+          )}
+
+          {active === "Leads a recuperar" && (
+            <article className="card table">
+              <h2>Leads a recuperar</h2>
+              <p>
+                Clientes em risco ou parados — priorizados por faturamento histórico ({leads?.count || 0}{" "}
+                oportunidades)
+              </p>
+              <div className="scroll">
                 <table>
                   <thead>
                     <tr>
-                      {["Nome", "Cidade", "UF", "E-mail", "Telefone"].map((x) => (
+                      {[
+                        "Cliente",
+                        "Segmento",
+                        "Potencial",
+                        "Pedidos",
+                        "Histórico R$",
+                        "Dias sem compra",
+                        "E-mail",
+                        "Telefone",
+                      ].map((x) => (
                         <th key={x}>{x}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {customers.map((c) => (
+                    {leadRows.map((c: ClassifiedCustomer) => (
                       <tr key={c.id}>
                         <td>{c.name}</td>
-                        <td>{c.city || "—"}</td>
-                        <td>{c.state || "—"}</td>
+                        <td>
+                          <mark>{segmentLabel[c.segment] || c.segment}</mark>
+                        </td>
+                        <td>{potentialLabel[c.potential] || c.potential}</td>
+                        <td>{num(c.orders)}</td>
+                        <td>{moneyExact(c.revenue)}</td>
+                        <td>{c.daysSinceLastOrder ?? "—"}</td>
                         <td>{c.email || "—"}</td>
                         <td>{c.phone || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {!leadRows.length && (
+                  <p className="empty pad">Nenhum lead para recuperar com os pedidos atuais.</p>
+                )}
               </div>
             </article>
+          )}
+
+          {active === "Estoque parado" && (
+            <>
+              <section className="kpis">
+                <K
+                  n="SKUs parados"
+                  v={num(deadStock?.count || 0)}
+                  d={`sem venda em ${deadStock?.noSaleDays || 90}d`}
+                  c="red"
+                />
+                <K
+                  n="Capital parado"
+                  v={money(deadStock?.totalStockValue || 0)}
+                  d="estoque × preço lista"
+                  c="orange"
+                />
+              </section>
+              <article className="card table">
+                <h2>Estoque sem giro</h2>
+                <p>Produtos com saldo e sem venda no período de análise</p>
+                <div className="scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        {["Código", "Produto", "Saldo", "Preço", "Valor parado", "Última venda", "Status"].map(
+                          (x) => (
+                            <th key={x}>{x}</th>
+                          )
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(deadStock?.products || []).map((p) => (
+                        <tr key={p.id}>
+                          <td>{p.code || "—"}</td>
+                          <td>{p.name}</td>
+                          <td>{num(p.stock)}</td>
+                          <td>{moneyExact(p.price)}</td>
+                          <td>{moneyExact(p.stockValue)}</td>
+                          <td>
+                            {p.lastSaleAt ? new Date(p.lastSaleAt).toLocaleDateString("pt-BR") : "—"}
+                          </td>
+                          <td>
+                            <mark>{p.neverSold ? "Nunca vendeu" : `${p.daysSinceLastSale} dias`}</mark>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!deadStock?.products?.length && (
+                    <p className="empty pad">Sem estoque parado — ou ainda faltam pedidos/itens sincronizados.</p>
+                  )}
+                </div>
+              </article>
+            </>
           )}
 
           {active === "Vendedores" && (
@@ -517,36 +768,6 @@ function App() {
                         <td>{s.active ? "Sim" : "Não"}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </article>
-          )}
-
-          {active === "Estoque" && (
-            <article className="card table">
-              <h2>Estoque</h2>
-              <p>Saldo sincronizado do Mercos</p>
-              <div className="scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      {["Código", "Produto", "Saldo", "Preço lista"].map((x) => (
-                        <th key={x}>{x}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...products]
-                      .sort((a, b) => (a.stock || 0) - (b.stock || 0))
-                      .map((p) => (
-                        <tr key={p.id}>
-                          <td>{p.code}</td>
-                          <td>{p.name}</td>
-                          <td>{num(p.stock)}</td>
-                          <td>{moneyExact(p.price)}</td>
-                        </tr>
-                      ))}
                   </tbody>
                 </table>
               </div>

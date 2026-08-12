@@ -10,6 +10,7 @@ export type Dashboard = {
     ordersChange: number;
     ticketAverage: number;
     customers: number;
+    customersTotal?: number;
     cancellations: number;
   };
   salesEvolution: { date: string; orders: number; revenue: number }[];
@@ -61,6 +62,61 @@ export type SyncState = {
   error: string | null;
 };
 
+export type ClassifiedCustomer = {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  email: string | null;
+  phone: string | null;
+  segment: "ativo" | "em_risco" | "recuperar" | "lead_novo" | string;
+  potential: string;
+  orders: number;
+  revenue: number;
+  ticketAverage: number;
+  firstOrderAt: string | null;
+  lastOrderAt: string | null;
+  daysSinceLastOrder: number | null;
+};
+
+export type CustomerIntelligence = {
+  inactiveDays: number;
+  riskDays: number;
+  summary: Record<string, number>;
+  total: number;
+  customers: ClassifiedCustomer[];
+};
+
+export type LeadsResponse = {
+  inactiveDays: number;
+  riskDays: number;
+  count: number;
+  leads: ClassifiedCustomer[];
+};
+
+export type DeadStockResponse = {
+  noSaleDays: number;
+  count: number;
+  totalStockValue: number;
+  products: {
+    id: string;
+    code: string | null;
+    name: string;
+    stock: number;
+    price: number;
+    stockValue: number;
+    lastSaleAt: string | null;
+    daysSinceLastSale: number | null;
+    neverSold: boolean;
+  }[];
+};
+
+export type ProductMovers = {
+  periodDays: number;
+  top: { id: string | null; name: string; code: string | null; quantity: number; revenue: number }[];
+  slow: { id: string | null; name: string; code: string | null; quantity: number; revenue: number }[];
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL não configurada");
   if (!API_KEY) throw new Error("VITE_BI_API_KEY não configurada");
@@ -89,11 +145,22 @@ export const api = {
   customers: (limit = 50) => request<CustomerRow[]>(`/api/v1/customers?limit=${limit}`),
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
   syncStatus: () => request<SyncState[]>(`/api/v1/sync/status`),
+  intelligence: (inactiveDays = 90, riskDays = 45) =>
+    request<CustomerIntelligence>(
+      `/api/v1/intelligence/customers?inactive_days=${inactiveDays}&risk_days=${riskDays}&limit=800`
+    ),
+  leads: (inactiveDays = 90, riskDays = 45) =>
+    request<LeadsResponse>(
+      `/api/v1/intelligence/leads?inactive_days=${inactiveDays}&risk_days=${riskDays}&limit=300`
+    ),
+  deadStock: (noSaleDays = 90) =>
+    request<DeadStockResponse>(`/api/v1/intelligence/dead-stock?no_sale_days=${noSaleDays}&limit=300`),
+  productMovers: (days: number) =>
+    request<ProductMovers>(`/api/v1/intelligence/product-movers?days=${days}`),
   sync: (resource = "all", full = false) =>
     request<{ status: string; message?: string }>(`/api/v1/sync/${resource}?full=${full ? "true" : "false"}`, {
       method: "POST",
     }),
-  /** Starts sync then polls until no resource is "running". */
   syncAndWait: async (
     resource = "all",
     full = false,
@@ -111,14 +178,13 @@ export const api = {
       const running = states.some((s) => s.status === "running");
       if (!running) {
         const failed = states.filter((s) => s.status === "error" || s.status === "interrupted");
-        if (failed.length && states.every((s) => s.status !== "success" && !(s.records || 0))) {
+        if (failed.length && states.every((s) => s.status !== "success" && s.status !== "partial" && !(s.records || 0))) {
           throw new Error(failed[0]?.error || started.message || "Sync falhou");
         }
         return states;
       }
       await sleep(intervalMs);
     }
-    // Don't fail hard — data may already be partial in DB
     const states = await api.syncStatus();
     onProgress?.(states);
     return states;
