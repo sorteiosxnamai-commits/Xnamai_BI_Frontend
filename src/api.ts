@@ -189,7 +189,7 @@ export const api = {
   products: (limit = 50) => request<ProductRow[]>(`/api/v1/products?limit=${limit}`),
   customers: (limit = 50) => request<CustomerRow[]>(`/api/v1/customers?limit=${limit}`),
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
-  syncStatus: () => requestRetry<SyncState[]>(`/api/v1/sync/status`),
+  syncStatus: () => requestRetry<SyncState[]>(`/api/v1/sync/status`, undefined, 3),
   intelligence: (
     inactiveDays = 90,
     riskDays = 90,
@@ -217,7 +217,8 @@ export const api = {
   sync: (resource = "all", full = false) =>
     requestRetry<{ status: string; message?: string }>(
       `/api/v1/sync/${resource}?full=${full ? "true" : "false"}`,
-      { method: "POST" }
+      { method: "POST" },
+      2
     ),
   syncAndWait: async (
     resource = "all",
@@ -226,13 +227,26 @@ export const api = {
     opts?: { intervalMs?: number; maxMs?: number }
   ) => {
     const started = await api.sync(resource, full);
-    const intervalMs = opts?.intervalMs ?? 5000;
+    const intervalMs = opts?.intervalMs ?? 8000;
     const maxMs = opts?.maxMs ?? 90 * 60 * 1000;
     const t0 = Date.now();
-    let autoResumed = false;
-    await sleep(800);
+    let failStreak = 0;
+    await sleep(1500);
     while (Date.now() - t0 < maxMs) {
-      const states = await api.syncStatus();
+      let states: SyncState[];
+      try {
+        states = await api.syncStatus();
+        failStreak = 0;
+      } catch (err) {
+        failStreak += 1;
+        if (failStreak >= 4) {
+          throw new Error(
+            "Backend indisponível durante a sync (Render reiniciou ou sobrecarregou). Espere 1–2 min e clique Sincronizar de novo."
+          );
+        }
+        await sleep(intervalMs * failStreak);
+        continue;
+      }
       onProgress?.(states);
       const running = states.some((s) => s.status === "running");
       if (running) {
@@ -240,12 +254,9 @@ export const api = {
         continue;
       }
       const interrupted = states.some((s) => s.status === "interrupted" || s.status === "partial");
-      if (interrupted && !autoResumed) {
-        autoResumed = true;
-        // Deploy/restart mid-sync: continue from saved cursor (incremental)
-        await api.sync(resource, false);
-        await sleep(2000);
-        continue;
+      if (interrupted) {
+        // Não dispara sync de novo automaticamente — evita martelar o Render
+        return states;
       }
       const failed = states.filter((s) => s.status === "error");
       if (failed.length && states.every((s) => s.status !== "success" && s.status !== "partial" && !(s.records || 0))) {
