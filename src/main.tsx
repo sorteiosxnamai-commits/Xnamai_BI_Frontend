@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   api,
@@ -14,6 +14,12 @@ import { chartPath, money, moneyExact, num, pct, relativeTime, statusLabel } fro
 import "./style.css";
 
 const menu = ["Visão geral", "Vendas", "Pedidos", "Produtos", "Clientes", "Vendedores", "Estoque", "Sincronização"];
+
+function needsFirstLoad(syncStates: SyncState[], orderCount: number, productCount: number, customerCount: number) {
+  if (!syncStates.length) return true;
+  if (syncStates.every((s) => !s.lastSuccessAt)) return true;
+  return orderCount === 0 && productCount === 0 && customerCount === 0;
+}
 
 function K({ n, v, d, c = "violet" }: { n: string; v: string; d: string; c?: string }) {
   const down = d.trim().startsWith("-");
@@ -62,17 +68,18 @@ function App() {
   const [sellers, setSellers] = useState<SellerRow[]>([]);
   const [syncStates, setSyncStates] = useState<SyncState[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const autoFirstLoadDone = useRef(false);
 
   const notify = (x: string) => {
     setToast(x);
-    setTimeout(() => setToast(""), 3500);
+    setTimeout(() => setToast(""), 4500);
   };
 
   const load = useCallback(async () => {
     if (!api.configured) {
       setError("Configure VITE_BI_API_URL e VITE_BI_API_KEY");
       setLoading(false);
-      return;
+      return null;
     }
     setLoading(true);
     setError("");
@@ -93,15 +100,57 @@ function App() {
       setCustomers(c);
       setSellers(s);
       setSyncStates(st);
+      return { syncStates: st, orders: o.length, products: p.length, customers: c.length };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar dados");
+      return null;
     } finally {
       setLoading(false);
     }
   }, [days]);
 
+  const runSync = useCallback(async (full = false, silent = false) => {
+    if (!api.configured) return;
+    setSyncing(true);
+    try {
+      if (!silent) notify(full ? "Primeira carga em andamento…" : "Sincronização incremental…");
+      await api.sync("all", full);
+      if (!silent) notify(full ? "Primeira carga concluída." : "Dados novos sincronizados.");
+      await load();
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Falha na sincronização");
+    } finally {
+      setSyncing(false);
+    }
+  }, [load]);
+
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    (async () => {
+      const result = await load();
+      if (cancelled || !result || autoFirstLoadDone.current) return;
+      if (needsFirstLoad(result.syncStates, result.orders, result.products, result.customers)) {
+        autoFirstLoadDone.current = true;
+        notify("Base vazia — iniciando primeira carga automática…");
+        setSyncing(true);
+        try {
+          await api.sync("all", true);
+          if (!cancelled) {
+            notify("Primeira carga concluída.");
+            await load();
+          }
+        } catch (e) {
+          if (!cancelled) notify(e instanceof Error ? e.message : "Falha na primeira carga");
+        } finally {
+          if (!cancelled) setSyncing(false);
+        }
+      } else {
+        autoFirstLoadDone.current = true;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const filteredOrders = useMemo(
@@ -137,20 +186,7 @@ function App() {
     })
     .join(", ");
 
-  async function runSync(full = false) {
-    setSyncing(true);
-    try {
-      notify(full ? "Carga completa iniciada…" : "Sincronização iniciada…");
-      await api.sync("all", full);
-      notify("Sincronização concluída.");
-      await load();
-    } catch (e) {
-      notify(e instanceof Error ? e.message : "Falha na sincronização");
-    } finally {
-      setSyncing(false);
-    }
-  }
-
+  const emptyBase = needsFirstLoad(syncStates, orders.length, products.length, customers.length);
   const k = dashboard?.kpis;
   const productRank =
     rankings?.products.map((x) => [x.name, `${num(x.quantity)} un.`, money(x.revenue)]) || [];
@@ -201,6 +237,13 @@ function App() {
             ⌕
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar no BI..." />
           </label>
+          <button
+            className="secondary"
+            disabled={syncing || !api.configured}
+            onClick={() => void runSync(true)}
+          >
+            ☁ {syncing ? "Carregando…" : "Primeira carga"}
+          </button>
           <button disabled={syncing || !api.configured} onClick={() => void runSync(false)}>
             ↻ {syncing ? "Sincronizando…" : "Sincronizar"}
           </button>
@@ -214,6 +257,13 @@ function App() {
             </div>
           )}
           {loading && <div className="banner">Carregando dados de produção…</div>}
+          {syncing && <div className="banner">Sincronizando com o Mercos Adaptor…</div>}
+          {emptyBase && !syncing && !loading && (
+            <div className="banner">
+              Base ainda vazia. A primeira carga roda automaticamente; você também pode disparar manualmente.
+              <button onClick={() => void runSync(true)}>Primeira carga</button>
+            </div>
+          )}
 
           <div className="toolbar">
             <div>
@@ -331,7 +381,7 @@ function App() {
                       ? `${productRank[0][0]} lidera o ranking de produtos. Use Sincronizar para atualizar os dados do Mercos.`
                       : "Dispare uma sincronização completa para popular o painel com dados de produção."}
                   </p>
-                  <button onClick={() => void runSync(true)}>Sincronização completa →</button>
+                  <button onClick={() => void runSync(true)}>Primeira carga →</button>
                 </div>
               </section>
             </>
@@ -515,11 +565,11 @@ function App() {
                 )}
               </div>
               <div className="sync-actions">
-                <button disabled={syncing} onClick={() => void runSync(false)}>
-                  Sync incremental
-                </button>
                 <button disabled={syncing} onClick={() => void runSync(true)}>
-                  Sync completa
+                  Primeira carga (completa)
+                </button>
+                <button disabled={syncing} onClick={() => void runSync(false)}>
+                  Sync incremental (só o novo)
                 </button>
               </div>
             </article>
