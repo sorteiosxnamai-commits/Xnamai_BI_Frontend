@@ -120,7 +120,8 @@ function App() {
     setLoading(true);
     setError("");
     try {
-      const [d, r, o, p, c, s, st, intel, leadData, dead, mov] = await Promise.all([
+      // Core endpoints only — heavy intelligence loads on demand per screen
+      const results = await Promise.allSettled([
         api.dashboard(days),
         api.rankings(days),
         api.orders(200),
@@ -128,22 +129,33 @@ function App() {
         api.customers(200),
         api.sellers(),
         api.syncStatus(),
-        api.intelligence(90, 45),
-        api.leads(90, 45),
-        api.deadStock(90),
         api.productMovers(days || 365),
       ]);
-      setDashboard(d);
-      setRankings(r);
+      const value = <T,>(i: number) => (results[i].status === "fulfilled" ? (results[i] as PromiseFulfilledResult<T>).value : null);
+      const d = value<Dashboard>(0);
+      const r = value<Rankings>(1);
+      const o = value<OrderRow[]>(2) || [];
+      const p = value<ProductRow[]>(3) || [];
+      const c = value<CustomerRow[]>(4) || [];
+      const s = value<SellerRow[]>(5) || [];
+      const st = value<SyncState[]>(6) || [];
+      const mov = value<ProductMovers>(7);
+      if (d) setDashboard(d);
+      if (r) setRankings(r);
       setOrders(o);
       setProducts(p);
       setCustomers(c);
       setSellers(s);
       setSyncStates(st);
-      setIntelligence(intel);
-      setLeads(leadData);
-      setDeadStock(dead);
-      setMovers(mov);
+      if (mov) setMovers(mov);
+      const failed = results.filter((x) => x.status === "rejected").length;
+      if (failed === results.length) {
+        setError("Backend indisponível no momento (rede/deploy). Tente de novo em alguns segundos.");
+        return null;
+      }
+      if (failed) {
+        setError(""); // partial data is fine
+      }
       return { syncStates: st, orders: o.length, products: p.length, customers: c.length };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar dados");
@@ -152,6 +164,18 @@ function App() {
       setLoading(false);
     }
   }, [days]);
+
+  const loadIntelligence = useCallback(async () => {
+    if (!api.configured) return;
+    const [intel, leadData, dead] = await Promise.allSettled([
+      api.intelligence(90, 45),
+      api.leads(90, 45),
+      api.deadStock(90),
+    ]);
+    if (intel.status === "fulfilled") setIntelligence(intel.value);
+    if (leadData.status === "fulfilled") setLeads(leadData.value);
+    if (dead.status === "fulfilled") setDeadStock(dead.value);
+  }, []);
 
   const runSync = useCallback(async (full = false, silent = false) => {
     if (!api.configured || syncing) return;
@@ -198,6 +222,16 @@ function App() {
       cancelled = true;
     };
   }, [load]);
+
+  useEffect(() => {
+    if (
+      active === "Clientes × pedidos" ||
+      active === "Leads a recuperar" ||
+      active === "Estoque parado"
+    ) {
+      void loadIntelligence();
+    }
+  }, [active, loadIntelligence]);
 
   const filteredOrders = useMemo(
     () =>
@@ -286,7 +320,7 @@ function App() {
         <div className="foot">
           <p>
             <i />
-            Mercos {error ? "offline" : "conectado"}
+            Mercos {error && !dashboard ? "offline" : "conectado"}
             <small>Atualizado {relativeTime(lastSync)}</small>
           </p>
           <div>
@@ -338,7 +372,7 @@ function App() {
               Sincronizar (incremental) ou espere o scheduler.
             </div>
           )}
-          {emptyBase && !syncing && !loading && (
+          {emptyBase && !syncing && !loading && !error && (
             <div className="banner">
               Base ainda vazia. A primeira carga roda automaticamente; você também pode disparar manualmente.
               <button onClick={() => void runSync(true)}>Primeira carga</button>
