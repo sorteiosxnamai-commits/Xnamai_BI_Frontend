@@ -136,6 +136,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function isTransient(err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /502|503|504|Failed to fetch|NetworkError|ERR_FAILED|Unexpected token|<!DOCTYPE|Bad Gateway/i.test(msg);
+}
+
+async function requestRetry<T>(path: string, init?: RequestInit, retries = 8): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await request<T>(path, init);
+    } catch (err) {
+      last = err;
+      if (!isTransient(err) || i === retries - 1) throw err;
+      await sleep(1500 * (i + 1));
+    }
+  }
+  throw last instanceof Error ? last : new Error("Falha de rede");
+}
+
 export const api = {
   configured: Boolean(API_URL && API_KEY),
   dashboard: (days: number) => request<Dashboard>(`/api/v1/dashboard?days=${days}`),
@@ -144,23 +163,24 @@ export const api = {
   products: (limit = 50) => request<ProductRow[]>(`/api/v1/products?limit=${limit}`),
   customers: (limit = 50) => request<CustomerRow[]>(`/api/v1/customers?limit=${limit}`),
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
-  syncStatus: () => request<SyncState[]>(`/api/v1/sync/status`),
+  syncStatus: () => requestRetry<SyncState[]>(`/api/v1/sync/status`),
   intelligence: (inactiveDays = 90, riskDays = 45) =>
-    request<CustomerIntelligence>(
+    requestRetry<CustomerIntelligence>(
       `/api/v1/intelligence/customers?inactive_days=${inactiveDays}&risk_days=${riskDays}&limit=800`
     ),
   leads: (inactiveDays = 90, riskDays = 45) =>
-    request<LeadsResponse>(
+    requestRetry<LeadsResponse>(
       `/api/v1/intelligence/leads?inactive_days=${inactiveDays}&risk_days=${riskDays}&limit=300`
     ),
   deadStock: (noSaleDays = 90) =>
-    request<DeadStockResponse>(`/api/v1/intelligence/dead-stock?no_sale_days=${noSaleDays}&limit=300`),
+    requestRetry<DeadStockResponse>(`/api/v1/intelligence/dead-stock?no_sale_days=${noSaleDays}&limit=300`),
   productMovers: (days: number) =>
-    request<ProductMovers>(`/api/v1/intelligence/product-movers?days=${days}`),
+    requestRetry<ProductMovers>(`/api/v1/intelligence/product-movers?days=${days}`),
   sync: (resource = "all", full = false) =>
-    request<{ status: string; message?: string }>(`/api/v1/sync/${resource}?full=${full ? "true" : "false"}`, {
-      method: "POST",
-    }),
+    requestRetry<{ status: string; message?: string }>(
+      `/api/v1/sync/${resource}?full=${full ? "true" : "false"}`,
+      { method: "POST" }
+    ),
   syncAndWait: async (
     resource = "all",
     full = false,
@@ -169,21 +189,31 @@ export const api = {
   ) => {
     const started = await api.sync(resource, full);
     const intervalMs = opts?.intervalMs ?? 5000;
-    const maxMs = opts?.maxMs ?? 45 * 60 * 1000;
+    const maxMs = opts?.maxMs ?? 90 * 60 * 1000;
     const t0 = Date.now();
+    let autoResumed = false;
     await sleep(800);
     while (Date.now() - t0 < maxMs) {
       const states = await api.syncStatus();
       onProgress?.(states);
       const running = states.some((s) => s.status === "running");
-      if (!running) {
-        const failed = states.filter((s) => s.status === "error" || s.status === "interrupted");
-        if (failed.length && states.every((s) => s.status !== "success" && s.status !== "partial" && !(s.records || 0))) {
-          throw new Error(failed[0]?.error || started.message || "Sync falhou");
-        }
-        return states;
+      if (running) {
+        await sleep(intervalMs);
+        continue;
       }
-      await sleep(intervalMs);
+      const interrupted = states.some((s) => s.status === "interrupted" || s.status === "partial");
+      if (interrupted && !autoResumed) {
+        autoResumed = true;
+        // Deploy/restart mid-sync: continue from saved cursor (incremental)
+        await api.sync(resource, false);
+        await sleep(2000);
+        continue;
+      }
+      const failed = states.filter((s) => s.status === "error");
+      if (failed.length && states.every((s) => s.status !== "success" && s.status !== "partial" && !(s.records || 0))) {
+        throw new Error(failed[0]?.error || started.message || "Sync falhou");
+      }
+      return states;
     }
     const states = await api.syncStatus();
     onProgress?.(states);
