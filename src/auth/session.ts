@@ -65,21 +65,15 @@ export async function logout(): Promise<void> {
 
 export async function authenticatedFetch(
   input: string,
-  init: RequestInit = {},
-  retry = true
+  init: RequestInit = {}
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  const response = await fetch(input, {
+  return fetch(input, {
     ...init,
     headers,
     credentials: "include",
   });
-  if (response.status === 401 && retry) {
-    const refreshed = await refreshSession();
-    if (refreshed) return authenticatedFetch(input, init, false);
-  }
-  return response;
 }
 
 export const authConfigured = Boolean(API_URL);
