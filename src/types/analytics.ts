@@ -127,8 +127,11 @@ export type OrderDetailResponse = {
     name: string;
     quantity: number;
     unitPrice: number;
+    sourceUnitPrice: number;
     discount: number;
     total: number;
+    sourceTotal: number;
+    priceSource: "catalog" | "order";
   }[];
   metadata: AnalyticsMetadata;
 };

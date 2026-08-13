@@ -334,14 +334,18 @@ export function OrdersPage({ filters }: { filters: AnalyticsFilters }) {
                   {detail.data.order.customerName || "Cliente não identificado"} ·{" "}
                   {money.format(detail.data.order.total)}
                 </p>
+                <p className="table-note">
+                  Os itens usam o preço de tabela atual. O total acima preserva
+                  o valor histórico informado pela Mercos.
+                </p>
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <thead>
                       <tr>
                         <th>Produto</th>
                         <th>Quantidade</th>
-                        <th>Unitário</th>
-                        <th>Total</th>
+                        <th>Preço atual</th>
+                        <th>Total pelo preço atual</th>
                       </tr>
                     </thead>
                     <tbody>

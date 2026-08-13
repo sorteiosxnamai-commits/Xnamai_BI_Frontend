@@ -129,8 +129,11 @@ const orderDetailSchema = z.object({
       name: z.string(),
       quantity: z.coerce.number(),
       unitPrice: z.coerce.number(),
+      sourceUnitPrice: z.coerce.number(),
       discount: z.coerce.number(),
       total: z.coerce.number(),
+      sourceTotal: z.coerce.number(),
+      priceSource: z.enum(["catalog", "order"]),
     })
   ),
   appliedFilters: z.record(z.string(), z.unknown()),
