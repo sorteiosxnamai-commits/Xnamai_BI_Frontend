@@ -87,9 +87,8 @@ export function RankingCharts({
           <div>
             <h2>Concentração dos 20 maiores clientes</h2>
             <p>
-              Barras: faturamento a preço de tabela de cada cliente. Linha:
-              quanto esses clientes já concentram do faturamento de toda a
-              base filtrada, não só dos 20 da tela.
+              Barras: faturamento dos pedidos de cada cliente. Linha: quanto
+              esses 20 já concentram do faturamento de toda a base filtrada.
             </p>
           </div>
           <ExportButtons report="customers" filters={filters} />
