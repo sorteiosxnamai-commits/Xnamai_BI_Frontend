@@ -26,7 +26,8 @@ const labels: Record<string, string> = {
   productsWithoutCategory: "Produtos sem categoria",
 };
 
-const number = (value: number) => value.toLocaleString("pt-BR");
+const number = (value: number | null | undefined) =>
+  value == null ? "Indisponível" : value.toLocaleString("pt-BR");
 
 function Coverage({
   label,
@@ -57,7 +58,11 @@ function Coverage({
   );
 }
 
-function MetricList({ values }: { values: Record<string, number> }) {
+function MetricList({
+  values,
+}: {
+  values: Record<string, number | null | undefined>;
+}) {
   return (
     <div className="quality-metrics">
       {Object.entries(values).map(([key, value]) => (

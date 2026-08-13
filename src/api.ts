@@ -173,7 +173,7 @@ export type DataQuality = {
     ordersWithoutCustomer: number;
     ordersWithoutSeller: number;
     itemsWithoutProduct: number;
-    orderTotalDivergences: number;
+    orderTotalDivergences: number | null;
   };
   dateRange: { min: string | null; max: string | null };
   sync: SyncState[];
