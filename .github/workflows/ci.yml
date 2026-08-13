@@ -1,0 +1,26 @@
+name: Frontend CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Verify production bundle contains no secrets
+        shell: bash
+        run: |
+          if rg -i 'VITE_BI_API_KEY|MERCOS_ADAPTOR_API_KEY|ApplicationToken|CompanyToken' dist; then
+            echo "Secret identifier found in frontend bundle"
+            exit 1
+          fi

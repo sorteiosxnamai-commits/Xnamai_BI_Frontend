@@ -1,5 +1,6 @@
+import { authenticatedFetch } from "./auth/session";
+
 const API_URL = (import.meta.env.VITE_BI_API_URL || "").replace(/\/$/, "");
-const API_KEY = import.meta.env.VITE_BI_API_KEY || "";
 
 export type Dashboard = {
   periodDays: number;
@@ -66,6 +67,23 @@ export type SyncState = {
   cursor: string | null;
   lastSuccessAt: string | null;
   records: number | null;
+  error: string | null;
+};
+
+export type SyncRun = {
+  id: number;
+  resource: string;
+  mode: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string | null;
+  cursorBefore: string | null;
+  cursorAfter: string | null;
+  pages: number;
+  received: number;
+  persisted: number;
+  failed: number;
+  details: Record<string, unknown>;
   error: string | null;
 };
 
@@ -142,20 +160,47 @@ export type OrdersInsight = {
   idleCustomers: { id: string; name: string; lastOrderAt: string | null; daysSinceLastOrder: number }[];
 };
 
+export type DataQuality = {
+  coverage: {
+    ordersWithItemsPct: number;
+    ordersWithCustomerPct: number;
+    ordersWithSellerPct: number;
+    itemsWithProductPct: number;
+    recognizedStatusPct: number;
+  };
+  integrity: {
+    ordersWithoutItems: number;
+    ordersWithoutCustomer: number;
+    ordersWithoutSeller: number;
+    itemsWithoutProduct: number;
+    orderTotalDivergences: number;
+  };
+  dateRange: { min: string | null; max: string | null };
+  sync: SyncState[];
+  warnings: string[];
+  counts: Record<string, number>;
+  zeroValues: Record<string, number>;
+  duplicates: Record<string, number>;
+  missingDimensions: Record<string, number>;
+  emptyRaw: Record<string, number>;
+  metadata: {
+    generatedAt: string;
+    dataThrough: string | null;
+    isPartial: boolean;
+    warnings: string[];
+  };
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL não configurada");
-  if (!API_KEY) throw new Error("VITE_BI_API_KEY não configurada");
   const ctrl = new AbortController();
   const ms = 25000;
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(`${API_URL}${path}`, {
+    const res = await authenticatedFetch(`${API_URL}${path}`, {
       ...init,
       signal: init?.signal || ctrl.signal,
-      headers: {
-        "X-API-Key": API_KEY,
-        ...(init?.headers || {}),
-      },
+      headers: init?.headers,
     });
     if (!res.ok && res.status !== 202) {
       const text = await res.text();
@@ -194,7 +239,7 @@ async function requestRetry<T>(path: string, init?: RequestInit, retries = 8): P
 }
 
 export const api = {
-  configured: Boolean(API_URL && API_KEY),
+  configured: Boolean(API_URL),
   dashboard: (days: number) => request<Dashboard>(`/api/v1/dashboard?days=${days}`),
   rankings: (days: number) => request<Rankings>(`/api/v1/rankings?days=${days}`),
   orders: (limit = 50, opts?: { days?: number; sort?: string; order?: "asc" | "desc" }) => {
@@ -210,6 +255,14 @@ export const api = {
   customers: (limit = 50) => request<CustomerRow[]>(`/api/v1/customers?limit=${limit}`),
   sellers: () => request<SellerRow[]>(`/api/v1/sellers`),
   syncStatus: () => requestRetry<SyncState[]>(`/api/v1/sync/status`, undefined, 3),
+  syncRuns: (page = 1) =>
+    request<{
+      items: SyncRun[];
+      page: number;
+      pageSize: number;
+      totalItems: number;
+      totalPages: number;
+    }>(`/api/v1/sync/runs?page=${page}&page_size=25`),
   intelligence: (
     inactiveDays = 90,
     riskDays = 90,
@@ -234,6 +287,8 @@ export const api = {
     requestRetry<DeadStockResponse>(`/api/v1/intelligence/dead-stock?no_sale_days=${noSaleDays}&limit=300`),
   productMovers: (days: number) =>
     requestRetry<ProductMovers>(`/api/v1/intelligence/product-movers?days=${days}`),
+  dataQuality: () =>
+    requestRetry<DataQuality>(`/api/v1/data-quality`, undefined, 3),
   sync: (resource = "all", full = false) =>
     requestRetry<{ status: string; message?: string }>(
       `/api/v1/sync/${resource}?full=${full ? "true" : "false"}`,

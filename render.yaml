@@ -6,5 +6,3 @@ services:
     envVars:
       - key: VITE_BI_API_URL
         value: https://xnamai-bi-backend.onrender.com
-      - key: VITE_BI_API_KEY
-        sync: false

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
 import {
   api,
   type ClassifiedCustomer,
   type CustomerIntelligence,
   type CustomerRow,
+  type DataQuality,
   type Dashboard,
   type DeadStockResponse,
   type LeadsResponse,
@@ -17,6 +17,7 @@ import {
   type SyncState,
 } from "./api";
 import { chartPath, money, moneyExact, num, pct, relativeTime, statusLabel } from "./format";
+import { DataQualityPage } from "./pages/DataQualityPage";
 import "./style.css";
 
 const menu = [
@@ -28,6 +29,7 @@ const menu = [
   "Leads a recuperar",
   "Estoque parado",
   "Vendedores",
+  "Qualidade dos dados",
   "Sincronização",
 ];
 
@@ -85,7 +87,7 @@ function Rank({ rows }: { rows: string[][] }) {
   );
 }
 
-function App() {
+export function LegacyDashboard() {
   const [active, setActive] = useState(menu[0]);
   const [days, setDays] = useState(0); // Tudo — histórico já importado; 30/90 dias só após sync chegar no presente
 
@@ -105,6 +107,9 @@ function App() {
   const [deadStock, setDeadStock] = useState<DeadStockResponse | null>(null);
   const [movers, setMovers] = useState<ProductMovers | null>(null);
   const [ordersInsight, setOrdersInsight] = useState<OrdersInsight | null>(null);
+  const [dataQuality, setDataQuality] = useState<DataQuality | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [qualityError, setQualityError] = useState("");
   const [segmentFilter, setSegmentFilter] = useState("todos");
   const [tableSort, setTableSort] = useState<{ key: string; order: "asc" | "desc" } | null>(null);
   const [orderSort, setOrderSort] = useState<{ key: string; order: "asc" | "desc" }>({
@@ -119,9 +124,23 @@ function App() {
     setTimeout(() => setToast(""), 4500);
   };
 
+  const loadDataQuality = useCallback(async () => {
+    if (!api.configured) return;
+    setQualityLoading(true);
+    setQualityError("");
+    try {
+      setDataQuality(await api.dataQuality());
+    } catch (e) {
+      setDataQuality(null);
+      setQualityError(e instanceof Error ? e.message : "Falha ao auditar a base");
+    } finally {
+      setQualityLoading(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     if (!api.configured) {
-      setError("Configure VITE_BI_API_URL e VITE_BI_API_KEY");
+      setError("Configure VITE_BI_API_URL");
       setLoading(false);
       return null;
     }
@@ -217,7 +236,8 @@ function App() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadDataQuality();
+  }, [load, loadDataQuality]);
 
   useEffect(() => {
     if (
@@ -228,6 +248,10 @@ function App() {
       void loadIntelligence();
     }
   }, [active, loadIntelligence]);
+
+  useEffect(() => {
+    if (active === "Qualidade dos dados") void loadDataQuality();
+  }, [active, loadDataQuality]);
 
   useEffect(() => {
     if (active !== "Pedidos" || !api.configured) return;
@@ -336,6 +360,8 @@ function App() {
 
   const today = dashboard?.today;
   const k = dashboard?.kpis;
+  const productRankingsReliable =
+    dataQuality != null && dataQuality.coverage.ordersWithItemsPct >= 95;
   const productRank =
     rankings?.products.map((x) => [x.name, `${num(x.quantity)} un.`, money(x.revenue)]) || [];
   const customerRank =
@@ -399,7 +425,7 @@ function App() {
         <nav>
           {menu.map((x, i) => (
             <button key={x} className={x === active ? "active" : ""} onClick={() => setActive(x)}>
-              <i>{["⌂", "↗", "▣", "◇", "◎", "⚡", "▤", "♙", "↻"][i]}</i>
+              <i>{["⌂", "↗", "▣", "◇", "◎", "⚡", "▤", "♙", "✓", "↻"][i]}</i>
               {x}
             </button>
           ))}
@@ -653,7 +679,17 @@ function App() {
                 <article className="card">
                   <h2>Produtos em destaque</h2>
                   <p>Por faturamento</p>
-                  <Rank rows={productRank.slice(0, 4)} />
+                  {productRankingsReliable ? (
+                    <Rank rows={productRank.slice(0, 4)} />
+                  ) : (
+                    <p className="empty">
+                      Ranking oculto: cobertura de itens{" "}
+                      {dataQuality
+                        ? `${dataQuality.coverage.ordersWithItemsPct.toLocaleString("pt-BR")}%`
+                        : "ainda não auditada"}
+                      .
+                    </p>
+                  )}
                 </article>
               </section>
               <section className="insight">
@@ -803,24 +839,32 @@ function App() {
                 <article className="card">
                   <h2>Mais vendidos</h2>
                   <p>Por faturamento no período</p>
-                  <Rank
-                    rows={(movers?.top || []).map((x) => [
-                      x.name,
-                      `${num(x.quantity)} un.`,
-                      money(x.revenue),
-                    ])}
-                  />
+                  {productRankingsReliable ? (
+                    <Rank
+                      rows={(movers?.top || []).map((x) => [
+                        x.name,
+                        `${num(x.quantity)} un.`,
+                        money(x.revenue),
+                      ])}
+                    />
+                  ) : (
+                    <p className="empty">Cobertura de itens insuficiente para ranking confiável.</p>
+                  )}
                 </article>
                 <article className="card">
                   <h2>Menos giro</h2>
                   <p>Produtos com venda fraca no período</p>
-                  <Rank
-                    rows={(movers?.slow || []).map((x) => [
-                      x.name,
-                      `${num(x.quantity)} un.`,
-                      money(x.revenue),
-                    ])}
-                  />
+                  {productRankingsReliable ? (
+                    <Rank
+                      rows={(movers?.slow || []).map((x) => [
+                        x.name,
+                        `${num(x.quantity)} un.`,
+                        money(x.revenue),
+                      ])}
+                    />
+                  ) : (
+                    <p className="empty">Cobertura de itens insuficiente para ranking confiável.</p>
+                  )}
                 </article>
               </section>
               <article className="card table">
@@ -1084,6 +1128,15 @@ function App() {
             </article>
           )}
 
+          {active === "Qualidade dos dados" && (
+            <DataQualityPage
+              data={dataQuality}
+              loading={qualityLoading}
+              error={qualityError}
+              onRetry={() => void loadDataQuality()}
+            />
+          )}
+
           {active === "Sincronização" && (
             <article className="card">
               <h2>Status da sincronização</h2>
@@ -1128,5 +1181,3 @@ function App() {
     </main>
   );
 }
-
-createRoot(document.getElementById("root")!).render(<App />);

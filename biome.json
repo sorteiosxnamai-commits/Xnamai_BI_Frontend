@@ -1,0 +1,26 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+	"files": {
+		"includes": [
+			"src/api/**",
+			"src/app/**",
+			"src/auth/**",
+			"src/components/**",
+			"src/hooks/**",
+			"src/pages/**",
+			"src/test/**",
+			"src/types/**",
+			"src/index.tsx"
+		],
+		"ignoreUnknown": true
+	},
+	"formatter": {
+		"enabled": false
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended"
+		}
+	}
+}
