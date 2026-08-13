@@ -26,9 +26,9 @@ const columns: EntityColumn<ProductAnalyticsRow>[] = [
   { id: "order_count", label: "Pedidos", render: (row) => number.format(row.orderCount) },
   { id: "revenue", label: "Faturamento", render: (row) => money.format(row.revenue) },
   {
-    id: "average_price",
-    label: "Preço médio",
-    render: (row) => money.format(row.averagePrice),
+    id: "list_price",
+    label: "Preço de tabela",
+    render: (row) => money.format(row.listPrice),
   },
   { id: "stock", label: "Estoque", render: (row) => number.format(row.stock) },
   {
