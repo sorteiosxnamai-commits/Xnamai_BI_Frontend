@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { analyticsApi } from "../api/client";
 import { EntityDetailDrawer } from "../components/feedback/EntityDetailDrawer";
 import { ExportButtons } from "../components/tables/ExportButtons";
+import { ExpandableOrderHistory } from "../components/tables/ExpandableOrderHistory";
 import {
   ServerEntityTable,
   type EntityColumn,
@@ -75,21 +76,14 @@ export function SellersPage({ filters }: { filters: AnalyticsFilters }) {
                 <article><span>Clientes</span><strong>{detail.data.seller.customers}</strong></article>
               </div>
               <h3>Pedidos recentes</h3>
-              <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead><tr><th>Pedido</th><th>Data</th><th>Cliente</th><th>Total</th></tr></thead>
-                  <tbody>
-                    {detail.data.orders.items.map((order) => (
-                      <tr key={order.id}>
-                        <td>{order.number}</td>
-                        <td>{order.issuedAt ? new Date(order.issuedAt).toLocaleDateString("pt-BR") : "—"}</td>
-                        <td>{order.customerName || "—"}</td>
-                        <td>{money.format(order.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <p className="table-note">
+                Clique no número do pedido para ver os itens.
+              </p>
+              <ExpandableOrderHistory
+                orders={detail.data.orders.items}
+                filters={filters}
+                extraColumn="customer"
+              />
               <h3>Carteira ativa no período</h3>
               <ul>
                 {detail.data.customers.items.map((customer) => (
