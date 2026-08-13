@@ -126,12 +126,12 @@ export type OrderDetailResponse = {
     code: string | null;
     name: string;
     quantity: number;
-    unitPrice: number;
+    unitPrice: number | null;
     sourceUnitPrice: number;
     discount: number;
-    total: number;
+    total: number | null;
     sourceTotal: number;
-    priceSource: "catalog" | "order";
+    priceSource: "catalog" | "unavailable";
   }[];
   metadata: AnalyticsMetadata;
 };
@@ -149,7 +149,7 @@ export type ProductAnalyticsRow = {
   cumulativeRevenueShare: number;
   abcClass: "A" | "B" | "C" | null;
   averagePrice: number;
-  listPrice: number;
+  listPrice: number | null;
   minimumPrice: number | null;
   stock: number;
   stockValue: number;

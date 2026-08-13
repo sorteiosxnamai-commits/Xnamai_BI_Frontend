@@ -14,8 +14,8 @@ const money = new Intl.NumberFormat("pt-BR", {
 const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
 const KPI_LABELS: Record<string, string> = {
-  grossRevenue: "Faturamento bruto",
-  netRevenue: "Faturamento líquido",
+  grossRevenue: "Faturamento a preço de tabela",
+  netRevenue: "Faturamento a preço de tabela",
   orders: "Pedidos válidos",
   averageTicket: "Ticket médio",
   customers: "Compradores únicos",
@@ -117,7 +117,9 @@ export function OverviewPage({ filters }: { filters: AnalyticsFilters }) {
     <div className="page-stack">
       <MetadataStatus metadata={overview.data.metadata} />
       <section className="metric-grid">
-        {Object.entries(overview.data.kpis).map(([name, kpi]) => (
+        {Object.entries(overview.data.kpis)
+          .filter(([name]) => name !== "grossRevenue")
+          .map(([name, kpi]) => (
           <KpiCard key={name} name={name} kpi={kpi} search={location.search} />
         ))}
       </section>

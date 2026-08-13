@@ -335,8 +335,10 @@ export function OrdersPage({ filters }: { filters: AnalyticsFilters }) {
                   {money.format(detail.data.order.total)}
                 </p>
                 <p className="table-note">
-                  Os itens usam o preço de tabela atual. O total acima preserva
-                  o valor histórico informado pela Mercos.
+                  O total do pedido e o faturamento usam o preço de tabela
+                  atual. O valor unitário do pedido fica só como histórico.
+                  Preços sentinela de R$ 1.000,00 aparecem como indisponíveis
+                  e não entram nos totais.
                 </p>
                 <div className="data-table-wrap">
                   <table className="data-table">
@@ -344,8 +346,9 @@ export function OrdersPage({ filters }: { filters: AnalyticsFilters }) {
                       <tr>
                         <th>Produto</th>
                         <th>Quantidade</th>
-                        <th>Preço atual</th>
-                        <th>Total pelo preço atual</th>
+                        <th>Valor unitário do pedido</th>
+                        <th>Preço de tabela atual</th>
+                        <th>Total a preço de tabela</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -353,8 +356,17 @@ export function OrdersPage({ filters }: { filters: AnalyticsFilters }) {
                         <tr key={item.id || item.position}>
                           <td>{item.name}</td>
                           <td>{item.quantity.toLocaleString("pt-BR")}</td>
-                          <td>{money.format(item.unitPrice)}</td>
-                          <td>{money.format(item.total)}</td>
+                          <td>{money.format(item.sourceUnitPrice)}</td>
+                          <td>
+                            {item.unitPrice == null
+                              ? "Indisponível"
+                              : money.format(item.unitPrice)}
+                          </td>
+                          <td>
+                            {item.total == null
+                              ? "Indisponível"
+                              : money.format(item.total)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

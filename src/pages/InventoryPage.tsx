@@ -16,9 +16,16 @@ const columns: EntityColumn<ProductAnalyticsRow>[] = [
   { id: "name", label: "Produto", render: (row) => row.name },
   { id: "stock", label: "Estoque", render: (row) => row.stock.toLocaleString("pt-BR") },
   {
+    id: "list_price",
+    label: "Preço de tabela unitário",
+    render: (row) =>
+      row.listPrice == null ? "Indisponível" : money.format(row.listPrice),
+  },
+  {
     id: "stock_value",
     label: "Valor a preço de tabela",
-    render: (row) => money.format(row.stockValue),
+    render: (row) =>
+      row.listPrice == null ? "Indisponível" : money.format(row.stockValue),
   },
   {
     id: "quantity_sold",

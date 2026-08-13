@@ -28,7 +28,8 @@ const columns: EntityColumn<ProductAnalyticsRow>[] = [
   {
     id: "list_price",
     label: "Preço de tabela",
-    render: (row) => money.format(row.listPrice),
+    render: (row) =>
+      row.listPrice == null ? "Indisponível" : money.format(row.listPrice),
   },
   { id: "stock", label: "Estoque", render: (row) => number.format(row.stock) },
   {

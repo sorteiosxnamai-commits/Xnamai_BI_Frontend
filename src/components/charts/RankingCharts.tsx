@@ -5,6 +5,7 @@ import {
   ComposedChart,
   Legend,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -84,8 +85,12 @@ export function RankingCharts({
       <article className="module-card">
         <div className="module-heading">
           <div>
-            <h2>Pareto de clientes</h2>
-            <p>Receita individual e participação acumulada na base filtrada.</p>
+            <h2>Concentração dos 20 maiores clientes</h2>
+            <p>
+              Barras: faturamento a preço de tabela de cada cliente. Linha:
+              quanto esses clientes já concentram do faturamento de toda a
+              base filtrada, não só dos 20 da tela.
+            </p>
           </div>
           <ExportButtons report="customers" filters={filters} />
         </div>
@@ -99,6 +104,13 @@ export function RankingCharts({
               <XAxis dataKey="name" />
               <YAxis yAxisId="money" tickFormatter={(value) => money.format(Number(value))} />
               <YAxis yAxisId="percent" orientation="right" domain={[0, 100]} unit="%" />
+              <ReferenceLine
+                yAxisId="percent"
+                y={80}
+                stroke="#b8871b"
+                strokeDasharray="4 4"
+                label="80%"
+              />
               <Tooltip
                 formatter={(value, name) =>
                   name === "Participação acumulada"
@@ -119,6 +131,17 @@ export function RankingCharts({
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+        )}
+        {data.customers.summary?.concentrationTop20Pct != null && (
+          <p className="table-note">
+            Os 20 maiores concentram{" "}
+            {Number(data.customers.summary.concentrationTop20Pct).toLocaleString(
+              "pt-BR",
+              { maximumFractionDigits: 1 }
+            )}
+            % do faturamento. A linha não chega a 100% porque o restante está
+            nos demais clientes, fora deste recorte.
+          </p>
         )}
       </article>
     </section>
