@@ -13,7 +13,6 @@ import { GlobalFilterBar } from "../components/filters/GlobalFilterBar";
 import { QueryState } from "../components/feedback/QueryState";
 import { useAnalyticsFilters } from "../hooks/useAnalyticsFilters";
 import { DataQualityPage } from "../pages/DataQualityPage";
-import { LoginPage } from "../pages/LoginPage";
 
 const LegacyDashboard = lazy(() =>
   import("../main").then((module) => ({ default: module.LegacyDashboard }))
@@ -77,7 +76,7 @@ function QualityRoute() {
 
 export function App() {
   const location = useLocation();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const syncStatus = useQuery({
     queryKey: ["sync-status"],
     queryFn: api.syncStatus,
@@ -103,7 +102,7 @@ export function App() {
         : filters.period.toUpperCase();
 
   if (loading) return <QueryState loading error={null} />;
-  if (!user) return <LoginPage />;
+  if (!user) return <QueryState loading error={null} />;
 
   if (location.pathname === "/legacy") {
     return (
@@ -152,9 +151,6 @@ export function App() {
             <span>
               {user.username} · {user.role}
             </span>
-            <button type="button" onClick={() => void signOut()}>
-              Sair
-            </button>
           </div>
         </header>
         {isAnalyticsRoute && (

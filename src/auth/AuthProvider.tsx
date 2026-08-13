@@ -1,10 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import {
-  login,
-  logout,
-  refreshSession,
-  type AuthUser,
-} from "./session";
+import { createContext, useContext } from "react";
+import type { AuthUser } from "./session";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -14,45 +9,15 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const directAccess: AuthContextValue = {
+  user: { username: "acesso-direto", role: "admin" },
+  loading: false,
+  signIn: () => Promise.resolve(),
+  signOut: () => Promise.resolve(),
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    const expire = () => setUser(null);
-    window.addEventListener("bi-auth-expired", expire);
-    void refreshSession()
-      .then((session) => {
-        if (active) setUser(session?.user || null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-      window.removeEventListener("bi-auth-expired", expire);
-    };
-  }, []);
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      loading,
-      signIn: async (username, password) => {
-        const session = await login(username, password);
-        setUser(session.user);
-      },
-      signOut: async () => {
-        await logout();
-        setUser(null);
-      },
-    }),
-    [loading, user]
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={directAccess}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
