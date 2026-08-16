@@ -186,6 +186,13 @@ export function App() {
                         customerIds: filters.customerIds.filter((value) => value !== id),
                       })
                     }
+                    onRestoreCustomer={(id) =>
+                      updateFilters({
+                        excludedCustomerIds: filters.excludedCustomerIds.filter(
+                          (value) => value !== id,
+                        ),
+                      })
+                    }
                   />
                 }
               />

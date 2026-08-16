@@ -10,6 +10,14 @@ vi.mock("../api/client", () => ({
     customers,
     customerDetail: vi.fn(),
     exportReport: vi.fn(),
+    filterOptions: vi.fn().mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 100,
+      totalItems: 0,
+      totalPages: 0,
+      option: "customers",
+    }),
   },
 }));
 
@@ -141,11 +149,16 @@ test("shows exclusive customer bands with per-customer averages", async () => {
 
   render(
     <QueryClientProvider client={client}>
-      <CustomersPage filters={DEFAULT_FILTERS} onExcludeCustomer={onExcludeCustomer} />
+      <CustomersPage
+        filters={DEFAULT_FILTERS}
+        onExcludeCustomer={onExcludeCustomer}
+        onRestoreCustomer={vi.fn()}
+      />
     </QueryClientProvider>
   );
 
-  expect(await screen.findByText(/Faturamento do período/)).toBeInTheDocument();
+  expect(await screen.findByText(/Faturamento a preço de tabela/)).toBeInTheDocument();
+  expect(screen.getByRole("searchbox", { name: "Buscar cliente para tirar da conta" })).toBeInTheDocument();
   expect(screen.getByText("R$ 613.415,37")).toBeInTheDocument();
   expect(screen.getByText("Top 5")).toBeInTheDocument();
   expect(screen.getByText("6º ao 10º")).toBeInTheDocument();
@@ -164,7 +177,7 @@ test("shows exclusive customer bands with per-customer averages", async () => {
   expect(screen.getByText("Top 5: 5 clientes")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Abrir perfil do cliente Loja Alpha" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Tirar Loja Alpha da conta" }));
-  expect(onExcludeCustomer).toHaveBeenCalledWith("c-top");
+  expect(onExcludeCustomer).toHaveBeenCalledWith("c-top", "Loja Alpha");
   fireEvent.click(screen.getByRole("button", { name: "Tirar Cliente A da conta" }));
-  expect(onExcludeCustomer).toHaveBeenCalledWith("c1");
+  expect(onExcludeCustomer).toHaveBeenCalledWith("c1", "Cliente A");
 });

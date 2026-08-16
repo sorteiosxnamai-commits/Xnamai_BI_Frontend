@@ -47,6 +47,79 @@ function asCohort(value: unknown): CustomerCohortSummary {
   };
 }
 
+function ExcludeCustomersControl({
+  excludedIds,
+  names,
+  onExclude,
+  onRestore,
+}: {
+  excludedIds: string[];
+  names: Record<string, string>;
+  onExclude: (id: string, name: string) => void;
+  onRestore: (id: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const query = useQuery({
+    queryKey: ["filter-options", "customers", search],
+    queryFn: () => analyticsApi.filterOptions("customers", search, 1),
+    staleTime: 5 * 60_000,
+  });
+  const options = (query.data?.items || []).filter(
+    (item) => !excludedIds.includes(item.id),
+  );
+  return (
+    <section className="exclude-bar" aria-label="Tirar clientes da conta">
+      <h3>Tirar clientes da conta</h3>
+      <p>
+        Os clientes escolhidos saem das faixas, da tabela e dos totais desta tela e da
+        visão geral. Digite o nome ou use Tirar na lista.
+      </p>
+      <div className="exclude-bar-search">
+        <input
+          type="search"
+          value={search}
+          placeholder="Buscar cliente para tirar…"
+          aria-label="Buscar cliente para tirar da conta"
+          onChange={(event) => setSearch(event.currentTarget.value)}
+        />
+      </div>
+      {search.trim() && (
+        <div className="exclude-bar-results">
+          {query.isLoading && <p>Buscando…</p>}
+          {query.isError && <p>Falha ao buscar clientes.</p>}
+          {!query.isLoading && !options.length && <p>Nenhum cliente encontrado.</p>}
+          {options.slice(0, 8).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onExclude(item.id, item.label);
+                setSearch("");
+              }}
+            >
+              Tirar {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!!excludedIds.length && (
+        <div className="exclude-chips">
+          {excludedIds.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onRestore(id)}
+              aria-label={`Devolver ${names[id] || id} à conta`}
+            >
+              {names[id] || id} ×
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CustomerCohortCards({
   summary,
   onSelectCustomer,
@@ -54,7 +127,7 @@ function CustomerCohortCards({
 }: {
   summary: Record<string, unknown>;
   onSelectCustomer: (id: string) => void;
-  onExcludeCustomer: (id: string) => void;
+  onExcludeCustomer: (id: string, name?: string) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const data = summary as CustomersPageSummary & Record<string, unknown>;
@@ -86,8 +159,9 @@ function CustomerCohortCards({
   return (
     <>
       <p className="cohort-heading">
-        Faturamento do período: <strong>{money.format(totalRevenue)}</strong> dividido em
-        4 faixas que somam 100%. Clique numa faixa para ver os clientes.
+        Faturamento a preço de tabela: <strong>{money.format(totalRevenue)}</strong>{" "}
+        dividido em 4 faixas que somam 100%. Clique numa faixa para ver os clientes e
+        tirá-los da conta.
       </p>
       <section className="metric-grid cohorts" aria-label="Divisão de clientes por faturamento">
         {cards.map(({ id, label, range, cohort }) => {
@@ -167,7 +241,7 @@ function CustomerCohortCards({
                     <button
                       type="button"
                       className="row-action"
-                      onClick={() => onExcludeCustomer(member.id)}
+                      onClick={() => onExcludeCustomer(member.id, member.name)}
                       aria-label={`Tirar ${member.name} da conta`}
                     >
                       Tirar da conta
@@ -189,18 +263,39 @@ function CustomerCohortCards({
       ) : null}
       <p className="cohort-note">
         As faixas não se sobrepõem: Top 5 + 6º ao 10º + 11º ao 20º + demais = 100% do
-        faturamento. Por cliente é o faturamento da faixa dividido pelos clientes dela.
-        Ticket médio é o valor médio de cada pedido desses clientes.
+        faturamento a preço de tabela, a mesma base da visão geral. Por cliente é o
+        faturamento da faixa dividido pelos clientes dela. Ticket médio é o valor médio
+        de cada pedido desses clientes.
       </p>
     </>
   );
 }
 
 function customerColumns(
-  onExcludeCustomer: (id: string) => void,
+  onExcludeCustomer: (id: string, name?: string) => void,
 ): EntityColumn<CustomerAnalyticsRow>[] {
   return [
-    { id: "name", label: "Cliente", render: (row) => row.name },
+    {
+      id: "name",
+      label: "Cliente",
+      render: (row) => (
+        <span className="customer-name-cell">
+          {row.name}
+          <button
+            type="button"
+            className="row-action"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onExcludeCustomer(row.id, row.name);
+            }}
+            aria-label={`Tirar ${row.name} da conta`}
+          >
+            Tirar da conta
+          </button>
+        </span>
+      ),
+    },
     { id: "city", label: "Cidade", render: (row) => row.city || "—" },
     { id: "state", label: "UF", render: (row) => row.state || "—" },
     { id: "order_count", label: "Pedidos", render: (row) => row.orderCount },
@@ -248,48 +343,52 @@ function customerColumns(
       render: (row) => row.rfm.segment,
     },
     { id: "abc", label: "ABC", sortable: false, render: (row) => row.abcClass || "—" },
-    {
-      id: "exclude",
-      label: "Conta",
-      sortable: false,
-      render: (row) => (
-        <button
-          type="button"
-          className="row-action"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onExcludeCustomer(row.id);
-          }}
-          aria-label={`Tirar ${row.name} da conta`}
-        >
-          Tirar
-        </button>
-      ),
-    },
   ];
 }
 
 export function CustomersPage({
   filters,
   onExcludeCustomer,
+  onRestoreCustomer,
 }: {
   filters: AnalyticsFilters;
-  onExcludeCustomer: (id: string) => void;
+  onExcludeCustomer: (id: string, name?: string) => void;
+  onRestoreCustomer: (id: string) => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [excludedNames, setExcludedNames] = useState<Record<string, string>>({});
+  const excludeCustomer = (id: string, name?: string) => {
+    if (name) {
+      setExcludedNames((current) => ({ ...current, [id]: name }));
+    }
+    onExcludeCustomer(id, name);
+  };
+  const restoreCustomer = (id: string) => {
+    setExcludedNames((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+    onRestoreCustomer(id);
+  };
   const detail = useQuery({
     queryKey: ["analytics", "customer-detail", selectedId, filters],
     queryFn: () => analyticsApi.customerDetail(selectedId || "", filters),
     enabled: Boolean(selectedId),
   });
   return (
-    <>
+    <div className="page-stack">
+      <ExcludeCustomersControl
+        excludedIds={filters.excludedCustomerIds}
+        names={excludedNames}
+        onExclude={excludeCustomer}
+        onRestore={restoreCustomer}
+      />
       <ServerEntityTable
         title="Clientes"
-        description="RFM, curva ABC, frequência, ticket e recência."
+        description="RFM, curva ABC, frequência, ticket e recência a preço de tabela."
         queryKey={["analytics", "customers", filters]}
-        columns={customerColumns(onExcludeCustomer)}
+        columns={customerColumns(excludeCustomer)}
         defaultSort="revenue"
         preferenceKey="customers"
         fetchPage={(options) => analyticsApi.customers(filters, options)}
@@ -298,7 +397,7 @@ export function CustomersPage({
           <CustomerCohortCards
             summary={summary}
             onSelectCustomer={setSelectedId}
-            onExcludeCustomer={onExcludeCustomer}
+            onExcludeCustomer={excludeCustomer}
           />
         )}
         onRowClick={(row) => setSelectedId(row.id)}
@@ -318,7 +417,7 @@ export function CustomersPage({
                 type="button"
                 className="row-action drawer-exclude"
                 onClick={() => {
-                  onExcludeCustomer(selectedId);
+                  excludeCustomer(selectedId, detail.data?.customer.name);
                   setSelectedId(null);
                 }}
               >
@@ -349,6 +448,6 @@ export function CustomersPage({
           )}
         </EntityDetailDrawer>
       )}
-    </>
+    </div>
   );
 }
