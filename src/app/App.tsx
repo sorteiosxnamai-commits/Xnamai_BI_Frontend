@@ -173,7 +173,22 @@ export function App() {
               <Route path="/overview" element={<OverviewPage filters={filters} />} />
               <Route path="/orders" element={<OrdersPage filters={filters} />} />
               <Route path="/products" element={<ProductsPage filters={filters} />} />
-              <Route path="/customers" element={<CustomersPage filters={filters} />} />
+              <Route
+                path="/customers"
+                element={
+                  <CustomersPage
+                    filters={filters}
+                    onExcludeCustomer={(id) =>
+                      updateFilters({
+                        excludedCustomerIds: filters.excludedCustomerIds.includes(id)
+                          ? filters.excludedCustomerIds
+                          : [...filters.excludedCustomerIds, id],
+                        customerIds: filters.customerIds.filter((value) => value !== id),
+                      })
+                    }
+                  />
+                }
+              />
               <Route path="/sellers" element={<SellersPage filters={filters} />} />
               <Route path="/inventory" element={<InventoryPage filters={filters} />} />
               <Route path="/insights" element={<InsightsPage filters={filters} />} />

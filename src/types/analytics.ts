@@ -11,6 +11,7 @@ export type AnalyticsFilters = {
   statuses: string[];
   sellerIds: string[];
   customerIds: string[];
+  excludedCustomerIds: string[];
   productIds: string[];
   categoryIds: string[];
   states: string[];

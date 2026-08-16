@@ -134,13 +134,14 @@ test("shows exclusive customer bands with per-customer averages", async () => {
       }),
     },
   });
+  const onExcludeCustomer = vi.fn();
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   render(
     <QueryClientProvider client={client}>
-      <CustomersPage filters={DEFAULT_FILTERS} />
+      <CustomersPage filters={DEFAULT_FILTERS} onExcludeCustomer={onExcludeCustomer} />
     </QueryClientProvider>
   );
 
@@ -162,4 +163,8 @@ test("shows exclusive customer bands with per-customer averages", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Top 5/ }));
   expect(screen.getByText("Top 5: 5 clientes")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Abrir perfil do cliente Loja Alpha" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Tirar Loja Alpha da conta" }));
+  expect(onExcludeCustomer).toHaveBeenCalledWith("c-top");
+  fireEvent.click(screen.getByRole("button", { name: "Tirar Cliente A da conta" }));
+  expect(onExcludeCustomer).toHaveBeenCalledWith("c1");
 });

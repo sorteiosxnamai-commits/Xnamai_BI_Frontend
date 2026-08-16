@@ -8,7 +8,7 @@ function wrapper({ children }: { children: ReactNode }) {
   return (
     <MemoryRouter
       initialEntries={[
-        "/overview?period=90d&statuses=2&statuses=0&states=SP&activeOnly=true",
+        "/overview?period=90d&statuses=2&statuses=0&states=SP&activeOnly=true&excludedCustomerIds=c1",
       ]}
     >
       {children}
@@ -23,7 +23,8 @@ test("restores filters from URL and updates combined state", () => {
   expect(result.current.filters.statuses).toEqual(["2", "0"]);
   expect(result.current.filters.states).toEqual(["SP"]);
   expect(result.current.filters.activeOnly).toBe(true);
-  expect(result.current.activeCount).toBe(4);
+  expect(result.current.filters.excludedCustomerIds).toEqual(["c1"]);
+  expect(result.current.activeCount).toBe(5);
 
   act(() => {
     result.current.updateFilters({ cities: ["São Paulo"], minValue: 100 });

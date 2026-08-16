@@ -207,7 +207,14 @@ export function ServerEntityTable<T extends object>({
                           ? rowLabel?.(row.original) || "Abrir detalhes"
                           : undefined
                       }
-                      onClick={() => onRowClick?.(row.original)}
+                      onClick={(event) => {
+                        if (
+                          (event.target as HTMLElement).closest("button, a, input")
+                        ) {
+                          return;
+                        }
+                        onRowClick?.(row.original);
+                      }}
                       onKeyDown={(event) => {
                         if (onRowClick && (event.key === "Enter" || event.key === " ")) {
                           event.preventDefault();

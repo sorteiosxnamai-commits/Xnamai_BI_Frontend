@@ -50,9 +50,11 @@ function asCohort(value: unknown): CustomerCohortSummary {
 function CustomerCohortCards({
   summary,
   onSelectCustomer,
+  onExcludeCustomer,
 }: {
   summary: Record<string, unknown>;
   onSelectCustomer: (id: string) => void;
+  onExcludeCustomer: (id: string) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const data = summary as CustomersPageSummary & Record<string, unknown>;
@@ -147,20 +149,30 @@ function CustomerCohortCards({
             <ol>
               {openCard.cohort.members.map((member) => (
                 <li key={member.id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectCustomer(member.id)}
-                    aria-label={`Abrir perfil do cliente ${member.name}`}
-                  >
-                    <span>
-                      {member.rank}º {member.name}
-                    </span>
-                    <small>
-                      {money.format(member.revenue)} · {member.orderCount} pedido
-                      {member.orderCount === 1 ? "" : "s"} ·{" "}
-                      {quantity.format(member.averageMonthlyOrders)} /mês
-                    </small>
-                  </button>
+                  <div className="cohort-member-row">
+                    <button
+                      type="button"
+                      onClick={() => onSelectCustomer(member.id)}
+                      aria-label={`Abrir perfil do cliente ${member.name}`}
+                    >
+                      <span>
+                        {member.rank}º {member.name}
+                      </span>
+                      <small>
+                        {money.format(member.revenue)} · {member.orderCount} pedido
+                        {member.orderCount === 1 ? "" : "s"} ·{" "}
+                        {quantity.format(member.averageMonthlyOrders)} /mês
+                      </small>
+                    </button>
+                    <button
+                      type="button"
+                      className="row-action"
+                      onClick={() => onExcludeCustomer(member.id)}
+                      aria-label={`Tirar ${member.name} da conta`}
+                    >
+                      Tirar da conta
+                    </button>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -184,58 +196,87 @@ function CustomerCohortCards({
   );
 }
 
-const columns: EntityColumn<CustomerAnalyticsRow>[] = [
-  { id: "name", label: "Cliente", render: (row) => row.name },
-  { id: "city", label: "Cidade", render: (row) => row.city || "—" },
-  { id: "state", label: "UF", render: (row) => row.state || "—" },
-  { id: "order_count", label: "Pedidos", render: (row) => row.orderCount },
-  { id: "revenue", label: "Faturamento", render: (row) => money.format(row.revenue) },
-  {
-    id: "average_ticket",
-    label: "Ticket médio",
-    render: (row) => money.format(row.averageTicket),
-  },
-  {
-    id: "first_order_at",
-    label: "Primeira compra",
-    render: (row) =>
-      row.firstOrderAt ? new Date(row.firstOrderAt).toLocaleDateString("pt-BR") : "—",
-  },
-  {
-    id: "last_order_at",
-    label: "Última compra",
-    render: (row) =>
-      row.lastOrderAt ? new Date(row.lastOrderAt).toLocaleDateString("pt-BR") : "—",
-  },
-  {
-    id: "days_since_last_order",
-    label: "Dias sem comprar",
-    render: (row) => row.daysSinceLastOrder ?? "Nunca comprou",
-  },
-  {
-    id: "average_interval",
-    label: "Intervalo médio",
-    sortable: false,
-    render: (row) =>
-      row.averageOrderIntervalDays == null
-        ? "—"
-        : `${row.averageOrderIntervalDays.toLocaleString("pt-BR", {
-            maximumFractionDigits: 0,
-          })} dias`,
-  },
-  { id: "recency", label: "R", render: (row) => row.rfm.recency },
-  { id: "frequency", label: "F", render: (row) => row.rfm.frequency },
-  { id: "monetary", label: "M", render: (row) => row.rfm.monetary },
-  {
-    id: "rfm_segment",
-    label: "Segmento RFM",
-    sortable: false,
-    render: (row) => row.rfm.segment,
-  },
-  { id: "abc", label: "ABC", sortable: false, render: (row) => row.abcClass || "—" },
-];
+function customerColumns(
+  onExcludeCustomer: (id: string) => void,
+): EntityColumn<CustomerAnalyticsRow>[] {
+  return [
+    { id: "name", label: "Cliente", render: (row) => row.name },
+    { id: "city", label: "Cidade", render: (row) => row.city || "—" },
+    { id: "state", label: "UF", render: (row) => row.state || "—" },
+    { id: "order_count", label: "Pedidos", render: (row) => row.orderCount },
+    { id: "revenue", label: "Faturamento", render: (row) => money.format(row.revenue) },
+    {
+      id: "average_ticket",
+      label: "Ticket médio",
+      render: (row) => money.format(row.averageTicket),
+    },
+    {
+      id: "first_order_at",
+      label: "Primeira compra",
+      render: (row) =>
+        row.firstOrderAt ? new Date(row.firstOrderAt).toLocaleDateString("pt-BR") : "—",
+    },
+    {
+      id: "last_order_at",
+      label: "Última compra",
+      render: (row) =>
+        row.lastOrderAt ? new Date(row.lastOrderAt).toLocaleDateString("pt-BR") : "—",
+    },
+    {
+      id: "days_since_last_order",
+      label: "Dias sem comprar",
+      render: (row) => row.daysSinceLastOrder ?? "Nunca comprou",
+    },
+    {
+      id: "average_interval",
+      label: "Intervalo médio",
+      sortable: false,
+      render: (row) =>
+        row.averageOrderIntervalDays == null
+          ? "—"
+          : `${row.averageOrderIntervalDays.toLocaleString("pt-BR", {
+              maximumFractionDigits: 0,
+            })} dias`,
+    },
+    { id: "recency", label: "R", render: (row) => row.rfm.recency },
+    { id: "frequency", label: "F", render: (row) => row.rfm.frequency },
+    { id: "monetary", label: "M", render: (row) => row.rfm.monetary },
+    {
+      id: "rfm_segment",
+      label: "Segmento RFM",
+      sortable: false,
+      render: (row) => row.rfm.segment,
+    },
+    { id: "abc", label: "ABC", sortable: false, render: (row) => row.abcClass || "—" },
+    {
+      id: "exclude",
+      label: "Conta",
+      sortable: false,
+      render: (row) => (
+        <button
+          type="button"
+          className="row-action"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onExcludeCustomer(row.id);
+          }}
+          aria-label={`Tirar ${row.name} da conta`}
+        >
+          Tirar
+        </button>
+      ),
+    },
+  ];
+}
 
-export function CustomersPage({ filters }: { filters: AnalyticsFilters }) {
+export function CustomersPage({
+  filters,
+  onExcludeCustomer,
+}: {
+  filters: AnalyticsFilters;
+  onExcludeCustomer: (id: string) => void;
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useQuery({
     queryKey: ["analytics", "customer-detail", selectedId, filters],
@@ -248,13 +289,17 @@ export function CustomersPage({ filters }: { filters: AnalyticsFilters }) {
         title="Clientes"
         description="RFM, curva ABC, frequência, ticket e recência."
         queryKey={["analytics", "customers", filters]}
-        columns={columns}
+        columns={customerColumns(onExcludeCustomer)}
         defaultSort="revenue"
         preferenceKey="customers"
         fetchPage={(options) => analyticsApi.customers(filters, options)}
         actions={<ExportButtons report="customers" filters={filters} />}
         renderSummary={(summary) => (
-          <CustomerCohortCards summary={summary} onSelectCustomer={setSelectedId} />
+          <CustomerCohortCards
+            summary={summary}
+            onSelectCustomer={setSelectedId}
+            onExcludeCustomer={onExcludeCustomer}
+          />
         )}
         onRowClick={(row) => setSelectedId(row.id)}
         rowLabel={(row) => `Abrir perfil do cliente ${row.name}`}
@@ -269,6 +314,16 @@ export function CustomersPage({ filters }: { filters: AnalyticsFilters }) {
         >
           {detail.data && (
             <>
+              <button
+                type="button"
+                className="row-action drawer-exclude"
+                onClick={() => {
+                  onExcludeCustomer(selectedId);
+                  setSelectedId(null);
+                }}
+              >
+                Tirar este cliente da conta
+              </button>
               <div className="metric-grid compact">
                 <article><span>Faturamento</span><strong>{money.format(detail.data.customer.revenue)}</strong></article>
                 <article><span>Pedidos</span><strong>{detail.data.customer.orderCount}</strong></article>

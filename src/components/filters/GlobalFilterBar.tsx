@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsApi } from "../../api/client";
 import type { AnalyticsFilters, FilterOption } from "../../types/analytics";
@@ -12,6 +13,7 @@ type Props = {
 type ArrayFilterKey =
   | "sellerIds"
   | "customerIds"
+  | "excludedCustomerIds"
   | "productIds"
   | "categoryIds"
   | "states"
@@ -39,6 +41,7 @@ function OptionSelect({
   filterKey,
   values,
   states = [],
+  searchable = false,
   onChange,
 }: {
   label: string;
@@ -46,28 +49,48 @@ function OptionSelect({
   filterKey: ArrayFilterKey;
   values: string[];
   states?: string[];
+  searchable?: boolean;
   onChange: Props["onChange"];
 }) {
+  const [search, setSearch] = useState("");
   const query = useQuery({
-    queryKey: ["filter-options", option, states],
-    queryFn: () => analyticsApi.filterOptions(option, "", 1, states),
+    queryKey: ["filter-options", option, search, states],
+    queryFn: () => analyticsApi.filterOptions(option, search, 1, states),
     staleTime: 5 * 60_000,
   });
   const options: FilterOption[] = query.data?.items || [];
   return (
     <label className="filter-field">
       <span>{label}</span>
+      {searchable && (
+        <input
+          type="search"
+          value={search}
+          placeholder="Buscar nome…"
+          aria-label={`Buscar ${label}`}
+          onChange={(event) => setSearch(event.currentTarget.value)}
+        />
+      )}
       <select
         multiple
         value={values}
         aria-label={`${label}; seleção múltipla`}
-        onChange={(event) =>
+        onChange={(event) => {
+          const selected = Array.from(event.currentTarget.selectedOptions).map(
+            (item) => item.value
+          );
+          if (!searchable) {
+            onChange({ [filterKey]: selected });
+            return;
+          }
+          const visible = new Set(options.map((item) => item.id));
           onChange({
-            [filterKey]: Array.from(event.currentTarget.selectedOptions).map(
-              (selected) => selected.value
-            ),
-          })
-        }
+            [filterKey]: [
+              ...values.filter((id) => !visible.has(id)),
+              ...selected,
+            ],
+          });
+        }}
       >
         {options.map((item) => (
           <option key={item.id} value={item.id}>
@@ -109,6 +132,7 @@ export function GlobalFilterBar({ filters, activeCount, onChange, onClear }: Pro
       ["statuses", "Status"],
       ["sellerIds", "Vendedores"],
       ["customerIds", "Clientes"],
+      ["excludedCustomerIds", "Excluídos da conta"],
       ["productIds", "Produtos"],
       ["categoryIds", "Categorias"],
       ["states", "Estados"],
@@ -220,6 +244,15 @@ export function GlobalFilterBar({ filters, activeCount, onChange, onClear }: Pro
           option="customers"
           filterKey="customerIds"
           values={filters.customerIds}
+          searchable
+          onChange={onChange}
+        />
+        <OptionSelect
+          label="Excluir da conta"
+          option="customers"
+          filterKey="excludedCustomerIds"
+          values={filters.excludedCustomerIds}
+          searchable
           onChange={onChange}
         />
         <OptionSelect

@@ -253,6 +253,7 @@ function paramsFromFilters(filters: AnalyticsFilters): URLSearchParams {
     ["statuses", "statuses"],
     ["sellerIds", "sellerIds"],
     ["customerIds", "customerIds"],
+    ["excludedCustomerIds", "excludedCustomerIds"],
     ["productIds", "productIds"],
     ["categoryIds", "categoryIds"],
     ["states", "states"],

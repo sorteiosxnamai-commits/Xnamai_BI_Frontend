@@ -28,13 +28,14 @@ test("exposes granularity and removes individual filter chips", () => {
     ...DEFAULT_FILTERS,
     period: "90d" as const,
     statuses: ["2"],
+    excludedCustomerIds: ["c1"],
   };
 
   render(
     <QueryClientProvider client={client}>
       <GlobalFilterBar
         filters={filters}
-        activeCount={2}
+        activeCount={3}
         onChange={onChange}
         onClear={vi.fn()}
       />
@@ -58,4 +59,9 @@ test("exposes granularity and removes individual filter chips", () => {
 
   fireEvent.click(screen.getByRole("button", { name: "Remover filtro Status: 1" }));
   expect(onChange).toHaveBeenCalledWith({ statuses: [] });
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remover filtro Excluídos da conta: 1" })
+  );
+  expect(onChange).toHaveBeenCalledWith({ excludedCustomerIds: [] });
 });
