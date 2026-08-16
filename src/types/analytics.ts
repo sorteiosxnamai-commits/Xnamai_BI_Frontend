@@ -165,14 +165,18 @@ export type ProductAnalyticsRow = {
 
 export type CustomerCohortSummary = {
   customerCount: number;
+  orderCount: number;
   revenue: number;
   revenueSharePct: number;
   orderSharePct: number;
   averageMonthlyOrders: number;
+  averageRevenuePerCustomer: number;
+  averageOrderValue: number;
 };
 
 export type CustomersPageSummary = {
   periodMonths?: number;
+  totalRevenue?: number;
   concentrationTop5Pct: number;
   concentrationTop10Pct: number;
   concentrationTop20Pct: number;
@@ -180,6 +184,8 @@ export type CustomersPageSummary = {
   top5?: CustomerCohortSummary;
   top10?: CustomerCohortSummary;
   top20?: CustomerCohortSummary;
+  ranks6to10?: CustomerCohortSummary;
+  ranks11to20?: CustomerCohortSummary;
   rest?: CustomerCohortSummary;
 };
 

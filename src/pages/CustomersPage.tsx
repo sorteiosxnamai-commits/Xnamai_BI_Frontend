@@ -22,88 +22,95 @@ const money = new Intl.NumberFormat("pt-BR", {
 const percent = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const quantity = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
-function asCohort(
-  summary: Record<string, unknown>,
-  key: "top5" | "top10" | "top20" | "rest",
-  fallbackShareKey: string,
-): CustomerCohortSummary {
-  const nested = summary[key];
-  if (nested && typeof nested === "object") {
-    const cohort = nested as CustomerCohortSummary;
-    return {
-      customerCount: Number(cohort.customerCount || 0),
-      revenue: Number(cohort.revenue || 0),
-      revenueSharePct: Number(cohort.revenueSharePct || 0),
-      orderSharePct: Number(cohort.orderSharePct || 0),
-      averageMonthlyOrders: Number(cohort.averageMonthlyOrders || 0),
-    };
-  }
+function asCohort(value: unknown): CustomerCohortSummary {
+  const cohort = (value && typeof value === "object" ? value : {}) as CustomerCohortSummary;
   return {
-    customerCount: 0,
-    revenue: 0,
-    revenueSharePct: Number(summary[fallbackShareKey] || 0),
-    orderSharePct: 0,
-    averageMonthlyOrders: 0,
+    customerCount: Number(cohort.customerCount || 0),
+    orderCount: Number(cohort.orderCount || 0),
+    revenue: Number(cohort.revenue || 0),
+    revenueSharePct: Number(cohort.revenueSharePct || 0),
+    orderSharePct: Number(cohort.orderSharePct || 0),
+    averageMonthlyOrders: Number(cohort.averageMonthlyOrders || 0),
+    averageRevenuePerCustomer: Number(cohort.averageRevenuePerCustomer || 0),
+    averageOrderValue: Number(cohort.averageOrderValue || 0),
   };
 }
 
 function CustomerCohortCards({ summary }: { summary: Record<string, unknown> }) {
   const data = summary as CustomersPageSummary & Record<string, unknown>;
   const cards = [
+    { id: "top5", label: "Top 5", range: "1º ao 5º", cohort: asCohort(data.top5) },
     {
-      id: "top5",
-      label: "Top 5",
-      hint: "do faturamento no período",
-      cohort: asCohort(data, "top5", "concentrationTop5Pct"),
+      id: "ranks6to10",
+      label: "6º ao 10º",
+      range: "próximos 5",
+      cohort: asCohort(data.ranks6to10),
     },
     {
-      id: "top10",
-      label: "Top 10",
-      hint: "do faturamento no período",
-      cohort: asCohort(data, "top10", "concentrationTop10Pct"),
-    },
-    {
-      id: "top20",
-      label: "Top 20",
-      hint: "do faturamento no período",
-      cohort: asCohort(data, "top20", "concentrationTop20Pct"),
+      id: "ranks11to20",
+      label: "11º ao 20º",
+      range: "próximos 10",
+      cohort: asCohort(data.ranks11to20),
     },
     {
       id: "rest",
       label: "Demais clientes",
-      hint: "do faturamento fora do Top 20",
-      cohort: asCohort(data, "rest", "concentrationRestPct"),
+      range: "fora do Top 20",
+      cohort: asCohort(data.rest),
     },
   ];
+  const totalRevenue =
+    Number(data.totalRevenue || 0) ||
+    cards.reduce((sum, card) => sum + card.cohort.revenue, 0);
   return (
     <>
+      <p className="cohort-heading">
+        Faturamento do período: <strong>{money.format(totalRevenue)}</strong> dividido em
+        4 faixas que somam 100%.
+      </p>
       <section className="metric-grid cohorts" aria-label="Divisão de clientes por faturamento">
-        {cards.map(({ id, label, hint, cohort }) => (
+        {cards.map(({ id, label, range, cohort }) => (
           <article key={id} className={id === "rest" ? "rest" : undefined}>
-            <span>{label}</span>
+            <span>
+              {label}
+              <em>{range}</em>
+            </span>
             <strong>{percent.format(cohort.revenueSharePct)}%</strong>
-            <small>{hint}</small>
-            <p>
-              Média de {quantity.format(cohort.averageMonthlyOrders)} pedidos/mês
-              {cohort.customerCount
-                ? ` · ${cohort.customerCount.toLocaleString("pt-BR")} cliente${
-                    cohort.customerCount === 1 ? "" : "s"
-                  }`
-                : ""}
-              {cohort.revenue
-                ? ` · ${money.format(cohort.revenue)}`
-                : ""}
-              {cohort.orderSharePct
-                ? ` · ${percent.format(cohort.orderSharePct)}% dos pedidos`
-                : ""}
-            </p>
+            <b className="cohort-total">{money.format(cohort.revenue)}</b>
+            <dl>
+              <div>
+                <dt>Por cliente</dt>
+                <dd>{money.format(cohort.averageRevenuePerCustomer)}</dd>
+              </div>
+              <div>
+                <dt>Ticket médio</dt>
+                <dd>{money.format(cohort.averageOrderValue)}</dd>
+              </div>
+              <div>
+                <dt>Pedidos/mês por cliente</dt>
+                <dd>{quantity.format(cohort.averageMonthlyOrders)}</dd>
+              </div>
+              <div>
+                <dt>Faixa</dt>
+                <dd>
+                  {cohort.customerCount.toLocaleString("pt-BR")} cliente
+                  {cohort.customerCount === 1 ? "" : "s"}
+                  {cohort.orderCount
+                    ? ` · ${cohort.orderCount.toLocaleString("pt-BR")} pedidos`
+                    : ""}
+                  {cohort.orderSharePct
+                    ? ` · ${percent.format(cohort.orderSharePct)}% dos pedidos`
+                    : ""}
+                </dd>
+              </div>
+            </dl>
           </article>
         ))}
       </section>
       <p className="cohort-note">
-        Top 5, 10 e 20 são os maiores em faturamento no período filtrado. Demais clientes
-        são a cauda longa: todos os outros compradores, para medir o impacto de quem fatura
-        menos.
+        As faixas não se sobrepõem: Top 5 + 6º ao 10º + 11º ao 20º + demais = 100% do
+        faturamento. Por cliente é o faturamento da faixa dividido pelos clientes dela.
+        Ticket médio é o valor médio de cada pedido desses clientes.
       </p>
     </>
   );
