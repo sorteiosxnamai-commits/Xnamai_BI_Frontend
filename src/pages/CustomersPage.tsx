@@ -8,12 +8,106 @@ import {
   ServerEntityTable,
   type EntityColumn,
 } from "../components/tables/ServerEntityTable";
-import type { AnalyticsFilters, CustomerAnalyticsRow } from "../types/analytics";
+import type {
+  AnalyticsFilters,
+  CustomerAnalyticsRow,
+  CustomerCohortSummary,
+  CustomersPageSummary,
+} from "../types/analytics";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+const percent = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+const quantity = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+
+function asCohort(
+  summary: Record<string, unknown>,
+  key: "top5" | "top10" | "top20" | "rest",
+  fallbackShareKey: string,
+): CustomerCohortSummary {
+  const nested = summary[key];
+  if (nested && typeof nested === "object") {
+    const cohort = nested as CustomerCohortSummary;
+    return {
+      customerCount: Number(cohort.customerCount || 0),
+      revenue: Number(cohort.revenue || 0),
+      revenueSharePct: Number(cohort.revenueSharePct || 0),
+      orderSharePct: Number(cohort.orderSharePct || 0),
+      averageMonthlyOrders: Number(cohort.averageMonthlyOrders || 0),
+    };
+  }
+  return {
+    customerCount: 0,
+    revenue: 0,
+    revenueSharePct: Number(summary[fallbackShareKey] || 0),
+    orderSharePct: 0,
+    averageMonthlyOrders: 0,
+  };
+}
+
+function CustomerCohortCards({ summary }: { summary: Record<string, unknown> }) {
+  const data = summary as CustomersPageSummary & Record<string, unknown>;
+  const cards = [
+    {
+      id: "top5",
+      label: "Top 5",
+      hint: "do faturamento no período",
+      cohort: asCohort(data, "top5", "concentrationTop5Pct"),
+    },
+    {
+      id: "top10",
+      label: "Top 10",
+      hint: "do faturamento no período",
+      cohort: asCohort(data, "top10", "concentrationTop10Pct"),
+    },
+    {
+      id: "top20",
+      label: "Top 20",
+      hint: "do faturamento no período",
+      cohort: asCohort(data, "top20", "concentrationTop20Pct"),
+    },
+    {
+      id: "rest",
+      label: "Demais clientes",
+      hint: "do faturamento fora do Top 20",
+      cohort: asCohort(data, "rest", "concentrationRestPct"),
+    },
+  ];
+  return (
+    <>
+      <section className="metric-grid cohorts" aria-label="Divisão de clientes por faturamento">
+        {cards.map(({ id, label, hint, cohort }) => (
+          <article key={id} className={id === "rest" ? "rest" : undefined}>
+            <span>{label}</span>
+            <strong>{percent.format(cohort.revenueSharePct)}%</strong>
+            <small>{hint}</small>
+            <p>
+              Média de {quantity.format(cohort.averageMonthlyOrders)} pedidos/mês
+              {cohort.customerCount
+                ? ` · ${cohort.customerCount.toLocaleString("pt-BR")} cliente${
+                    cohort.customerCount === 1 ? "" : "s"
+                  }`
+                : ""}
+              {cohort.revenue
+                ? ` · ${money.format(cohort.revenue)}`
+                : ""}
+              {cohort.orderSharePct
+                ? ` · ${percent.format(cohort.orderSharePct)}% dos pedidos`
+                : ""}
+            </p>
+          </article>
+        ))}
+      </section>
+      <p className="cohort-note">
+        Top 5, 10 e 20 são os maiores em faturamento no período filtrado. Demais clientes
+        são a cauda longa: todos os outros compradores, para medir o impacto de quem fatura
+        menos.
+      </p>
+    </>
+  );
+}
 
 const columns: EntityColumn<CustomerAnalyticsRow>[] = [
   { id: "name", label: "Cliente", render: (row) => row.name },
@@ -84,20 +178,7 @@ export function CustomersPage({ filters }: { filters: AnalyticsFilters }) {
         preferenceKey="customers"
         fetchPage={(options) => analyticsApi.customers(filters, options)}
         actions={<ExportButtons report="customers" filters={filters} />}
-        renderSummary={(summary) => (
-          <section className="metric-grid compact">
-            {[
-              { label: "Top 5", value: summary.concentrationTop5Pct },
-              { label: "Top 10", value: summary.concentrationTop10Pct },
-              { label: "Top 20", value: summary.concentrationTop20Pct },
-            ].map(({ label, value }) => (
-              <article key={label}>
-                <span>Concentração {label}</span>
-                <strong>{Number(value || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</strong>
-              </article>
-            ))}
-          </section>
-        )}
+        renderSummary={(summary) => <CustomerCohortCards summary={summary} />}
         onRowClick={(row) => setSelectedId(row.id)}
         rowLabel={(row) => `Abrir perfil do cliente ${row.name}`}
       />

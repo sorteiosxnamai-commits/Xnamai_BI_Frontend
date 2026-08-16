@@ -163,6 +163,26 @@ export type ProductAnalyticsRow = {
   classification: string;
 };
 
+export type CustomerCohortSummary = {
+  customerCount: number;
+  revenue: number;
+  revenueSharePct: number;
+  orderSharePct: number;
+  averageMonthlyOrders: number;
+};
+
+export type CustomersPageSummary = {
+  periodMonths?: number;
+  concentrationTop5Pct: number;
+  concentrationTop10Pct: number;
+  concentrationTop20Pct: number;
+  concentrationRestPct?: number;
+  top5?: CustomerCohortSummary;
+  top10?: CustomerCohortSummary;
+  top20?: CustomerCohortSummary;
+  rest?: CustomerCohortSummary;
+};
+
 export type CustomerAnalyticsRow = {
   id: string;
   name: string;
