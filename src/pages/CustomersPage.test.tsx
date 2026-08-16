@@ -180,4 +180,9 @@ test("shows exclusive customer bands with per-customer averages", async () => {
   expect(onExcludeCustomer).toHaveBeenCalledWith("c-top", "Loja Alpha");
   fireEvent.click(screen.getByRole("button", { name: "Tirar Cliente A da conta" }));
   expect(onExcludeCustomer).toHaveBeenCalledWith("c1", "Cliente A");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar na tabela" }), {
+    target: { value: "shopie" },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "Tirar este cliente da conta" }));
+  expect(onExcludeCustomer).toHaveBeenCalledWith("c1", "Cliente A");
 });

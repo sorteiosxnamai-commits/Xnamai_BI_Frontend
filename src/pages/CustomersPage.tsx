@@ -271,31 +271,9 @@ function CustomerCohortCards({
   );
 }
 
-function customerColumns(
-  onExcludeCustomer: (id: string, name?: string) => void,
-): EntityColumn<CustomerAnalyticsRow>[] {
+function customerColumns(): EntityColumn<CustomerAnalyticsRow>[] {
   return [
-    {
-      id: "name",
-      label: "Cliente",
-      render: (row) => (
-        <span className="customer-name-cell">
-          {row.name}
-          <button
-            type="button"
-            className="row-action"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onExcludeCustomer(row.id, row.name);
-            }}
-            aria-label={`Tirar ${row.name} da conta`}
-          >
-            Tirar da conta
-          </button>
-        </span>
-      ),
-    },
+    { id: "name", label: "Cliente", render: (row) => row.name },
     { id: "city", label: "Cidade", render: (row) => row.city || "—" },
     { id: "state", label: "UF", render: (row) => row.state || "—" },
     { id: "order_count", label: "Pedidos", render: (row) => row.orderCount },
@@ -386,13 +364,33 @@ export function CustomersPage({
       />
       <ServerEntityTable
         title="Clientes"
-        description="RFM, curva ABC, frequência, ticket e recência a preço de tabela."
+        description="A busca só filtra a lista. Para tirar da conta, use o botão azul na primeira coluna ou ao lado da busca."
         queryKey={["analytics", "customers", filters]}
-        columns={customerColumns(excludeCustomer)}
+        columns={customerColumns()}
         defaultSort="revenue"
         preferenceKey="customers"
         fetchPage={(options) => analyticsApi.customers(filters, options)}
         actions={<ExportButtons report="customers" filters={filters} />}
+        pinnedAction={{
+          header: "Conta",
+          render: (row) => (
+            <button
+              type="button"
+              className="row-action-solid"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                excludeCustomer(row.id, row.name);
+              }}
+              aria-label={`Tirar ${row.name} da conta`}
+            >
+              Tirar da conta
+            </button>
+          ),
+        }}
+        onExcludeVisible={(rows) => {
+          rows.forEach((row) => excludeCustomer(row.id, row.name));
+        }}
         renderSummary={(summary) => (
           <CustomerCohortCards
             summary={summary}

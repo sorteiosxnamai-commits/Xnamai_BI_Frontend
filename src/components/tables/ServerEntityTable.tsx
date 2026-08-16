@@ -36,6 +36,11 @@ type Props<T extends object> = {
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
   renderSummary?: (summary: Record<string, unknown>) => ReactNode;
+  pinnedAction?: {
+    header: string;
+    render: (row: T) => ReactNode;
+  };
+  onExcludeVisible?: (rows: T[]) => void;
 };
 
 export function ServerEntityTable<T extends object>({
@@ -50,6 +55,8 @@ export function ServerEntityTable<T extends object>({
   onRowClick,
   rowLabel,
   renderSummary,
+  pinnedAction,
+  onExcludeVisible,
 }: Props<T>) {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(50);
@@ -129,11 +136,23 @@ export function ServerEntityTable<T extends object>({
               type="search"
               value={search}
               placeholder="Buscar…"
+              aria-label="Buscar na tabela"
               onChange={(event) => {
                 setSearch(event.target.value);
                 setPageIndex(0);
               }}
             />
+            {onExcludeVisible && search.trim() && !!query.data?.items.length && (
+              <button
+                type="button"
+                className="row-action-solid"
+                onClick={() => onExcludeVisible(query.data.items)}
+              >
+                {query.data.items.length === 1
+                  ? "Tirar este cliente da conta"
+                  : `Tirar estes ${query.data.items.length} da conta`}
+              </button>
+            )}
             <details className="column-selector">
               <summary>Colunas</summary>
               <div>
@@ -165,6 +184,11 @@ export function ServerEntityTable<T extends object>({
                 <thead>
                   {table.getHeaderGroups().map((group) => (
                     <tr key={group.id}>
+                      {pinnedAction && (
+                        <th className="pinned-action" scope="col">
+                          {pinnedAction.header}
+                        </th>
+                      )}
                       {group.headers.map((header) => {
                         const sorted = header.column.getIsSorted();
                         return (
@@ -222,6 +246,11 @@ export function ServerEntityTable<T extends object>({
                         }
                       }}
                     >
+                      {pinnedAction && (
+                        <td className="pinned-action">
+                          {pinnedAction.render(row.original)}
+                        </td>
+                      )}
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
