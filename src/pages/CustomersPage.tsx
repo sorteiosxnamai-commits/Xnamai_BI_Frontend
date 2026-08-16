@@ -271,8 +271,29 @@ function CustomerCohortCards({
   );
 }
 
-function customerColumns(): EntityColumn<CustomerAnalyticsRow>[] {
+function customerColumns(
+  onExcludeCustomer: (id: string, name?: string) => void,
+): EntityColumn<CustomerAnalyticsRow>[] {
   return [
+    {
+      id: "exclude",
+      label: "Tirar",
+      sortable: false,
+      render: (row) => (
+        <button
+          type="button"
+          className="row-action-solid"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onExcludeCustomer(row.id, row.name);
+          }}
+          aria-label={`Tirar ${row.name} da conta`}
+        >
+          Tirar da conta
+        </button>
+      ),
+    },
     { id: "name", label: "Cliente", render: (row) => row.name },
     { id: "city", label: "Cidade", render: (row) => row.city || "—" },
     { id: "state", label: "UF", render: (row) => row.state || "—" },
@@ -356,38 +377,24 @@ export function CustomersPage({
   });
   return (
     <div className="page-stack">
-      <ExcludeCustomersControl
-        excludedIds={filters.excludedCustomerIds}
-        names={excludedNames}
-        onExclude={excludeCustomer}
-        onRestore={restoreCustomer}
-      />
       <ServerEntityTable
         title="Clientes"
-        description="A busca só filtra a lista. Para tirar da conta, use o botão azul na primeira coluna ou ao lado da busca."
+        description="O botão azul Tirar da conta fica na primeira coluna, à esquerda do nome."
         queryKey={["analytics", "customers", filters]}
-        columns={customerColumns()}
+        columns={customerColumns(excludeCustomer)}
         defaultSort="revenue"
         preferenceKey="customers"
+        alwaysVisibleColumns={["exclude"]}
         fetchPage={(options) => analyticsApi.customers(filters, options)}
         actions={<ExportButtons report="customers" filters={filters} />}
-        pinnedAction={{
-          header: "Conta",
-          render: (row) => (
-            <button
-              type="button"
-              className="row-action-solid"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                excludeCustomer(row.id, row.name);
-              }}
-              aria-label={`Tirar ${row.name} da conta`}
-            >
-              Tirar da conta
-            </button>
-          ),
-        }}
+        lead={
+          <ExcludeCustomersControl
+            excludedIds={filters.excludedCustomerIds}
+            names={excludedNames}
+            onExclude={excludeCustomer}
+            onRestore={restoreCustomer}
+          />
+        }
         onExcludeVisible={(rows) => {
           rows.forEach((row) => excludeCustomer(row.id, row.name));
         }}

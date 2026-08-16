@@ -36,11 +36,9 @@ type Props<T extends object> = {
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
   renderSummary?: (summary: Record<string, unknown>) => ReactNode;
-  pinnedAction?: {
-    header: string;
-    render: (row: T) => ReactNode;
-  };
+  alwaysVisibleColumns?: string[];
   onExcludeVisible?: (rows: T[]) => void;
+  lead?: ReactNode;
 };
 
 export function ServerEntityTable<T extends object>({
@@ -55,8 +53,9 @@ export function ServerEntityTable<T extends object>({
   onRowClick,
   rowLabel,
   renderSummary,
-  pinnedAction,
+  alwaysVisibleColumns = [],
   onExcludeVisible,
+  lead,
 }: Props<T>) {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(50);
@@ -97,9 +96,17 @@ export function ServerEntityTable<T extends object>({
         accessorFn: (row: T) => row,
         cell: (context) => definition.render(context.row.original),
         enableSorting: definition.sortable !== false,
+        enableHiding: !alwaysVisibleColumns.includes(definition.id),
       })),
-    [definitions]
+    [alwaysVisibleColumns, definitions]
   );
+  const lockedVisibility = useMemo(() => {
+    const next = { ...columnVisibility };
+    alwaysVisibleColumns.forEach((id) => {
+      next[id] = true;
+    });
+    return next;
+  }, [alwaysVisibleColumns, columnVisibility]);
   const table = useReactTable({
     data: query.data?.items || [],
     columns: tableColumns,
@@ -109,7 +116,7 @@ export function ServerEntityTable<T extends object>({
     pageCount: query.data?.totalPages || 0,
     state: {
       sorting,
-      columnVisibility,
+      columnVisibility: lockedVisibility,
       pagination: { pageIndex, pageSize },
     },
     onColumnVisibilityChange: setColumnVisibility,
@@ -156,7 +163,7 @@ export function ServerEntityTable<T extends object>({
             <details className="column-selector">
               <summary>Colunas</summary>
               <div>
-                {table.getAllLeafColumns().map((column) => (
+                {table.getAllLeafColumns().filter((column) => column.getCanHide()).map((column) => (
                   <label key={column.id}>
                     <input
                       type="checkbox"
@@ -171,6 +178,7 @@ export function ServerEntityTable<T extends object>({
             {actions}
           </div>
         </div>
+        {lead}
         <QueryState
           loading={query.isLoading}
           error={query.error as Error | null}
@@ -184,11 +192,6 @@ export function ServerEntityTable<T extends object>({
                 <thead>
                   {table.getHeaderGroups().map((group) => (
                     <tr key={group.id}>
-                      {pinnedAction && (
-                        <th className="pinned-action" scope="col">
-                          {pinnedAction.header}
-                        </th>
-                      )}
                       {group.headers.map((header) => {
                         const sorted = header.column.getIsSorted();
                         return (
@@ -246,11 +249,6 @@ export function ServerEntityTable<T extends object>({
                         }
                       }}
                     >
-                      {pinnedAction && (
-                        <td className="pinned-action">
-                          {pinnedAction.render(row.original)}
-                        </td>
-                      )}
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
