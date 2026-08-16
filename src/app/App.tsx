@@ -178,7 +178,7 @@ export function App() {
                 element={
                   <CustomersPage
                     filters={filters}
-                    onExcludeCustomer={(id) =>
+                    onExcludeCustomer={(id: string) =>
                       updateFilters({
                         excludedCustomerIds: filters.excludedCustomerIds.includes(id)
                           ? filters.excludedCustomerIds
@@ -186,7 +186,7 @@ export function App() {
                         customerIds: filters.customerIds.filter((value) => value !== id),
                       })
                     }
-                    onRestoreCustomer={(id) =>
+                    onRestoreCustomer={(id: string) =>
                       updateFilters({
                         excludedCustomerIds: filters.excludedCustomerIds.filter(
                           (value) => value !== id,
