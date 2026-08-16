@@ -21,6 +21,18 @@ type ArrayFilterKey =
   | "orderTypeIds"
   | "paymentConditionIds";
 
+const GRANULARITY_FOR_PERIOD: Record<
+  AnalyticsFilters["period"],
+  AnalyticsFilters["granularity"]
+> = {
+  "7d": "day",
+  "30d": "day",
+  "90d": "week",
+  "365d": "month",
+  ytd: "month",
+  all: "month",
+};
+
 function OptionSelect({
   label,
   option,
@@ -145,13 +157,15 @@ export function GlobalFilterBar({ filters, activeCount, onChange, onClear }: Pro
           <span>Período</span>
           <select
             value={filters.period}
-            onChange={(event) =>
+            onChange={(event) => {
+              const period = event.target.value as AnalyticsFilters["period"];
               onChange({
-                period: event.target.value as AnalyticsFilters["period"],
+                period,
                 dateFrom: undefined,
                 dateTo: undefined,
-              })
-            }
+                granularity: GRANULARITY_FOR_PERIOD[period],
+              });
+            }}
           >
             <option value="7d">7 dias</option>
             <option value="30d">30 dias</option>

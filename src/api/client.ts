@@ -290,7 +290,7 @@ function pageParams(filters: AnalyticsFilters, options: PageOptions) {
 async function request<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL não configurada");
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 25_000);
+  const timer = window.setTimeout(() => controller.abort(), 60_000);
   try {
     const response = await authenticatedFetch(`${API_URL}${path}`, {
       signal: controller.signal,

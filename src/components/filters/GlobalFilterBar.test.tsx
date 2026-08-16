@@ -46,6 +46,16 @@ test("exposes granularity and removes individual filter chips", () => {
   });
   expect(onChange).toHaveBeenCalledWith({ granularity: "month" });
 
+  fireEvent.change(screen.getByLabelText("Período"), {
+    target: { value: "ytd" },
+  });
+  expect(onChange).toHaveBeenCalledWith({
+    period: "ytd",
+    dateFrom: undefined,
+    dateTo: undefined,
+    granularity: "month",
+  });
+
   fireEvent.click(screen.getByRole("button", { name: "Remover filtro Status: 1" }));
   expect(onChange).toHaveBeenCalledWith({ statuses: [] });
 });
