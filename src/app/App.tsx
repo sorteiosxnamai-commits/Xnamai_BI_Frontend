@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Navigate,
@@ -13,32 +13,33 @@ import { GlobalFilterBar } from "../components/filters/GlobalFilterBar";
 import { QueryState } from "../components/feedback/QueryState";
 import { useAnalyticsFilters } from "../hooks/useAnalyticsFilters";
 import { DataQualityPage } from "../pages/DataQualityPage";
+import { lazyPage } from "./lazyPage";
 
-const LegacyDashboard = lazy(() =>
+const LegacyDashboard = lazyPage(() =>
   import("../main").then((module) => ({ default: module.LegacyDashboard }))
 );
-const OverviewPage = lazy(() =>
+const OverviewPage = lazyPage(() =>
   import("../pages/OverviewPage").then((module) => ({ default: module.OverviewPage }))
 );
-const OrdersPage = lazy(() =>
+const OrdersPage = lazyPage(() =>
   import("../pages/OrdersPage").then((module) => ({ default: module.OrdersPage }))
 );
-const ProductsPage = lazy(() =>
+const ProductsPage = lazyPage(() =>
   import("../pages/ProductsPage").then((module) => ({ default: module.ProductsPage }))
 );
-const CustomersPage = lazy(() =>
+const CustomersPage = lazyPage(() =>
   import("../pages/CustomersPage").then((module) => ({ default: module.CustomersPage }))
 );
-const SellersPage = lazy(() =>
+const SellersPage = lazyPage(() =>
   import("../pages/SellersPage").then((module) => ({ default: module.SellersPage }))
 );
-const InventoryPage = lazy(() =>
+const InventoryPage = lazyPage(() =>
   import("../pages/InventoryPage").then((module) => ({ default: module.InventoryPage }))
 );
-const InsightsPage = lazy(() =>
+const InsightsPage = lazyPage(() =>
   import("../pages/InsightsPage").then((module) => ({ default: module.InsightsPage }))
 );
-const SyncPage = lazy(() =>
+const SyncPage = lazyPage(() =>
   import("../pages/SyncPage").then((module) => ({ default: module.SyncPage }))
 );
 

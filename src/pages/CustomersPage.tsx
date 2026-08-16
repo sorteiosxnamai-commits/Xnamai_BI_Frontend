@@ -11,6 +11,7 @@ import {
 import type {
   AnalyticsFilters,
   CustomerAnalyticsRow,
+  CustomerCohortMember,
   CustomerCohortSummary,
   CustomersPageSummary,
 } from "../types/analytics";
@@ -24,6 +25,7 @@ const quantity = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
 function asCohort(value: unknown): CustomerCohortSummary {
   const cohort = (value && typeof value === "object" ? value : {}) as CustomerCohortSummary;
+  const members = Array.isArray(cohort.members) ? cohort.members : [];
   return {
     customerCount: Number(cohort.customerCount || 0),
     orderCount: Number(cohort.orderCount || 0),
@@ -33,10 +35,26 @@ function asCohort(value: unknown): CustomerCohortSummary {
     averageMonthlyOrders: Number(cohort.averageMonthlyOrders || 0),
     averageRevenuePerCustomer: Number(cohort.averageRevenuePerCustomer || 0),
     averageOrderValue: Number(cohort.averageOrderValue || 0),
+    members: members.map((member: CustomerCohortMember) => ({
+      id: String(member.id || ""),
+      name: String(member.name || member.id || "Cliente"),
+      rank: Number(member.rank || 0),
+      revenue: Number(member.revenue || 0),
+      orderCount: Number(member.orderCount || 0),
+      averageMonthlyOrders: Number(member.averageMonthlyOrders || 0),
+    })),
+    membersOmitted: Number(cohort.membersOmitted || 0),
   };
 }
 
-function CustomerCohortCards({ summary }: { summary: Record<string, unknown> }) {
+function CustomerCohortCards({
+  summary,
+  onSelectCustomer,
+}: {
+  summary: Record<string, unknown>;
+  onSelectCustomer: (id: string) => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
   const data = summary as CustomersPageSummary & Record<string, unknown>;
   const cards = [
     { id: "top5", label: "Top 5", range: "1º ao 5º", cohort: asCohort(data.top5) },
@@ -62,51 +80,101 @@ function CustomerCohortCards({ summary }: { summary: Record<string, unknown> }) 
   const totalRevenue =
     Number(data.totalRevenue || 0) ||
     cards.reduce((sum, card) => sum + card.cohort.revenue, 0);
+  const openCard = cards.find((card) => card.id === openId);
   return (
     <>
       <p className="cohort-heading">
         Faturamento do período: <strong>{money.format(totalRevenue)}</strong> dividido em
-        4 faixas que somam 100%.
+        4 faixas que somam 100%. Clique numa faixa para ver os clientes.
       </p>
       <section className="metric-grid cohorts" aria-label="Divisão de clientes por faturamento">
-        {cards.map(({ id, label, range, cohort }) => (
-          <article key={id} className={id === "rest" ? "rest" : undefined}>
-            <span>
-              {label}
-              <em>{range}</em>
-            </span>
-            <strong>{percent.format(cohort.revenueSharePct)}%</strong>
-            <b className="cohort-total">{money.format(cohort.revenue)}</b>
-            <dl>
-              <div>
-                <dt>Por cliente</dt>
-                <dd>{money.format(cohort.averageRevenuePerCustomer)}</dd>
-              </div>
-              <div>
-                <dt>Ticket médio</dt>
-                <dd>{money.format(cohort.averageOrderValue)}</dd>
-              </div>
-              <div>
-                <dt>Pedidos/mês por cliente</dt>
-                <dd>{quantity.format(cohort.averageMonthlyOrders)}</dd>
-              </div>
-              <div>
-                <dt>Faixa</dt>
-                <dd>
-                  {cohort.customerCount.toLocaleString("pt-BR")} cliente
-                  {cohort.customerCount === 1 ? "" : "s"}
-                  {cohort.orderCount
-                    ? ` · ${cohort.orderCount.toLocaleString("pt-BR")} pedidos`
-                    : ""}
-                  {cohort.orderSharePct
-                    ? ` · ${percent.format(cohort.orderSharePct)}% dos pedidos`
-                    : ""}
-                </dd>
-              </div>
-            </dl>
-          </article>
-        ))}
+        {cards.map(({ id, label, range, cohort }) => {
+          const expanded = openId === id;
+          return (
+            <article key={id} className={id === "rest" ? "rest" : undefined}>
+              <button
+                type="button"
+                className="cohort-toggle"
+                aria-expanded={expanded}
+                onClick={() => setOpenId(expanded ? null : id)}
+              >
+                <span>
+                  {label}
+                  <em>{range}</em>
+                </span>
+                <strong>{percent.format(cohort.revenueSharePct)}%</strong>
+                <b className="cohort-total">{money.format(cohort.revenue)}</b>
+                <dl>
+                  <div>
+                    <dt>Por cliente</dt>
+                    <dd>{money.format(cohort.averageRevenuePerCustomer)}</dd>
+                  </div>
+                  <div>
+                    <dt>Ticket médio</dt>
+                    <dd>{money.format(cohort.averageOrderValue)}</dd>
+                  </div>
+                  <div>
+                    <dt>Pedidos/mês por cliente</dt>
+                    <dd>{quantity.format(cohort.averageMonthlyOrders)}</dd>
+                  </div>
+                  <div>
+                    <dt>Faixa</dt>
+                    <dd>
+                      {cohort.customerCount.toLocaleString("pt-BR")} cliente
+                      {cohort.customerCount === 1 ? "" : "s"}
+                      {cohort.orderCount
+                        ? ` · ${cohort.orderCount.toLocaleString("pt-BR")} pedidos`
+                        : ""}
+                      {cohort.orderSharePct
+                        ? ` · ${percent.format(cohort.orderSharePct)}% dos pedidos`
+                        : ""}
+                    </dd>
+                  </div>
+                </dl>
+                <small>{expanded ? "Recolher lista" : "Ver clientes da faixa"}</small>
+              </button>
+            </article>
+          );
+        })}
       </section>
+      {openCard ? (
+        <section className="cohort-members-panel" aria-label={`Clientes da faixa ${openCard.label}`}>
+          <h3>
+            {openCard.label}: {openCard.cohort.customerCount.toLocaleString("pt-BR")} cliente
+            {openCard.cohort.customerCount === 1 ? "" : "s"}
+          </h3>
+          {openCard.cohort.members?.length ? (
+            <ol>
+              {openCard.cohort.members.map((member) => (
+                <li key={member.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectCustomer(member.id)}
+                    aria-label={`Abrir perfil do cliente ${member.name}`}
+                  >
+                    <span>
+                      {member.rank}º {member.name}
+                    </span>
+                    <small>
+                      {money.format(member.revenue)} · {member.orderCount} pedido
+                      {member.orderCount === 1 ? "" : "s"} ·{" "}
+                      {quantity.format(member.averageMonthlyOrders)} /mês
+                    </small>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>Nenhum cliente nesta faixa no período.</p>
+          )}
+          {openCard.cohort.membersOmitted ? (
+            <p>
+              + {openCard.cohort.membersOmitted.toLocaleString("pt-BR")} clientes não listados.
+              Use a tabela abaixo para ver o restante.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
       <p className="cohort-note">
         As faixas não se sobrepõem: Top 5 + 6º ao 10º + 11º ao 20º + demais = 100% do
         faturamento. Por cliente é o faturamento da faixa dividido pelos clientes dela.
@@ -185,7 +253,9 @@ export function CustomersPage({ filters }: { filters: AnalyticsFilters }) {
         preferenceKey="customers"
         fetchPage={(options) => analyticsApi.customers(filters, options)}
         actions={<ExportButtons report="customers" filters={filters} />}
-        renderSummary={(summary) => <CustomerCohortCards summary={summary} />}
+        renderSummary={(summary) => (
+          <CustomerCohortCards summary={summary} onSelectCustomer={setSelectedId} />
+        )}
         onRowClick={(row) => setSelectedId(row.id)}
         rowLabel={(row) => `Abrir perfil do cliente ${row.name}`}
       />

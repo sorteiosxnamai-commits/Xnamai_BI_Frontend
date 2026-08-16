@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { DEFAULT_FILTERS } from "../hooks/useAnalyticsFilters";
 
@@ -19,7 +19,7 @@ vi.mock("../auth/AuthProvider", () => ({
 
 import { CustomersPage } from "./CustomersPage";
 
-function cohort(overrides: Record<string, number>) {
+function cohort(overrides: Record<string, unknown>) {
   return {
     customerCount: 0,
     orderCount: 0,
@@ -29,6 +29,8 @@ function cohort(overrides: Record<string, number>) {
     averageMonthlyOrders: 0,
     averageRevenuePerCustomer: 0,
     averageOrderValue: 0,
+    members: [],
+    membersOmitted: 0,
     ...overrides,
   };
 }
@@ -89,6 +91,16 @@ test("shows exclusive customer bands with per-customer averages", async () => {
         averageMonthlyOrders: 5.8,
         averageRevenuePerCustomer: 46910.63,
         averageOrderValue: 8088.04,
+        members: [
+          {
+            id: "c-top",
+            name: "Loja Alpha",
+            rank: 1,
+            revenue: 80000,
+            orderCount: 8,
+            averageMonthlyOrders: 8,
+          },
+        ],
       }),
       ranks6to10: cohort({
         customerCount: 5,
@@ -147,4 +159,7 @@ test("shows exclusive customer bands with per-customer averages", async () => {
   expect(screen.getByText("R$ 8.088,04")).toBeInTheDocument();
   expect(screen.getByText("5,8")).toBeInTheDocument();
   expect(screen.getByText(/264 clientes/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Top 5/ }));
+  expect(screen.getByText("Top 5: 5 clientes")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Abrir perfil do cliente Loja Alpha" })).toBeInTheDocument();
 });

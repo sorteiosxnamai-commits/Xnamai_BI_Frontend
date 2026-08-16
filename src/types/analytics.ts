@@ -163,6 +163,15 @@ export type ProductAnalyticsRow = {
   classification: string;
 };
 
+export type CustomerCohortMember = {
+  id: string;
+  name: string;
+  rank: number;
+  revenue: number;
+  orderCount: number;
+  averageMonthlyOrders: number;
+};
+
 export type CustomerCohortSummary = {
   customerCount: number;
   orderCount: number;
@@ -172,6 +181,8 @@ export type CustomerCohortSummary = {
   averageMonthlyOrders: number;
   averageRevenuePerCustomer: number;
   averageOrderValue: number;
+  members?: CustomerCohortMember[];
+  membersOmitted?: number;
 };
 
 export type CustomersPageSummary = {
