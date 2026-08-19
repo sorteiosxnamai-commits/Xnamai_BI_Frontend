@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useChartColors } from "../../theme/useChartColors";
 import type { AnalyticsFilters, RankingsResponse } from "../../types/analytics";
 import { QueryState } from "../feedback/QueryState";
 import { ExportButtons } from "../tables/ExportButtons";
@@ -28,6 +29,7 @@ export function RankingCharts({
   data: RankingsResponse;
   filters: AnalyticsFilters;
 }) {
+  const colors = useChartColors();
   return (
     <section className="breakdown-grid">
       <article className="module-card">
@@ -44,12 +46,12 @@ export function RankingCharts({
         <div className="chart-wrap" role="img" aria-label="Produtos por faturamento">
           <ResponsiveContainer width="100%" height={310}>
             <BarChart data={data.products.items.slice(0, 10)} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" tickFormatter={(value) => money.format(Number(value))} />
-              <YAxis type="category" dataKey="name" width={110} />
-              <Tooltip formatter={(value) => money.format(Number(value))} />
+              <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" tickFormatter={(value) => money.format(Number(value))} tick={colors.axis} />
+              <YAxis type="category" dataKey="name" width={110} tick={colors.axis} />
+              <Tooltip contentStyle={colors.tooltip} formatter={(value) => money.format(Number(value))} />
               <Legend />
-              <Bar dataKey="revenue" name="Faturamento" fill="#635bdf" radius={[0, 5, 5, 0]} />
+              <Bar dataKey="revenue" name="Faturamento" fill={colors.accent} radius={[0, 5, 5, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -70,12 +72,12 @@ export function RankingCharts({
         <div className="chart-wrap" role="img" aria-label="Vendedores por faturamento">
           <ResponsiveContainer width="100%" height={310}>
             <BarChart data={data.sellers.items.slice(0, 10)}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis tickFormatter={(value) => money.format(Number(value))} />
-              <Tooltip formatter={(value) => money.format(Number(value))} />
+              <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={colors.axis} />
+              <YAxis tickFormatter={(value) => money.format(Number(value))} tick={colors.axis} />
+              <Tooltip contentStyle={colors.tooltip} formatter={(value) => money.format(Number(value))} />
               <Legend />
-              <Bar dataKey="revenue" name="Faturamento" fill="#2ba77a" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="revenue" name="Faturamento" fill={colors.positive} radius={[5, 5, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -99,18 +101,19 @@ export function RankingCharts({
         <div className="chart-wrap" role="img" aria-label="Pareto de clientes">
           <ResponsiveContainer width="100%" height={310}>
             <ComposedChart data={data.customers.items}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="money" tickFormatter={(value) => money.format(Number(value))} />
-              <YAxis yAxisId="percent" orientation="right" domain={[0, 100]} unit="%" />
+              <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={colors.axis} />
+              <YAxis yAxisId="money" tickFormatter={(value) => money.format(Number(value))} tick={colors.axis} />
+              <YAxis yAxisId="percent" orientation="right" domain={[0, 100]} unit="%" tick={colors.axis} />
               <ReferenceLine
                 yAxisId="percent"
                 y={80}
-                stroke="#b8871b"
+                stroke={colors.warning}
                 strokeDasharray="4 4"
                 label="80%"
               />
               <Tooltip
+                contentStyle={colors.tooltip}
                 formatter={(value, name) =>
                   name === "Participação acumulada"
                     ? `${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
@@ -118,12 +121,12 @@ export function RankingCharts({
                 }
               />
               <Legend />
-              <Bar yAxisId="money" dataKey="revenue" name="Faturamento" fill="#635bdf" />
+              <Bar yAxisId="money" dataKey="revenue" name="Faturamento" fill={colors.accent} />
               <Line
                 yAxisId="percent"
                 dataKey="cumulativeRevenueShare"
                 name="Participação acumulada"
-                stroke="#d05261"
+                stroke={colors.negative}
                 strokeWidth={2}
                 dot={false}
               />

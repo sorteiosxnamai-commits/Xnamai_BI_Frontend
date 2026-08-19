@@ -1,4 +1,4 @@
-.new-app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh;background:#f6f7fb}
+.new-app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh;background:var(--bg);color:var(--text)}
 .new-app>.app-sidebar{position:fixed;inset:0 auto 0 0;width:250px;padding:26px 18px;background:#18192d;color:#fff;z-index:20}
 .brand-block{padding:0 10px 28px}.brand-block strong,.brand-block span{display:block}.brand-block strong{font-size:19px;letter-spacing:.15em}.brand-block span{margin-top:5px;color:#8d92aa;font-size:10px}
 .app-sidebar nav{display:flex;flex-direction:column;gap:5px}.app-sidebar nav a{display:flex;align-items:center;gap:9px;padding:12px 14px;border-radius:9px;color:#a7abc1;text-decoration:none;font-size:12px}.app-sidebar nav a i{width:22px;font-style:normal;font-size:16px}.app-sidebar nav a:hover,.app-sidebar nav a.active{background:#2d2e4d;color:#fff}

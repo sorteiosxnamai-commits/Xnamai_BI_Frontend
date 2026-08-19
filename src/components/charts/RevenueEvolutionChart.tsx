@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useChartColors } from "../../theme/useChartColors";
 import type { AnalyticsFilters, TimeseriesResponse } from "../../types/analytics";
 import { ExportButtons } from "../tables/ExportButtons";
 
@@ -32,6 +33,7 @@ export function RevenueEvolutionChart({
   );
   const location = useLocation();
   const navigate = useNavigate();
+  const colors = useChartColors();
   const settings = {
     revenue: { label: "Faturamento", format: (value: number) => money.format(value) },
     orders: {
@@ -107,14 +109,15 @@ export function RevenueEvolutionChart({
           >
             <defs>
               <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#635bdf" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#635bdf" stopOpacity={0.02} />
+                <stop offset="5%" stopColor={colors.accent} stopOpacity={0.35} />
+                <stop offset="95%" stopColor={colors.accent} stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={(value) => settings.format(Number(value))} tick={{ fontSize: 11 }} />
+            <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="period" tick={colors.axis} />
+            <YAxis tickFormatter={(value) => settings.format(Number(value))} tick={colors.axis} />
             <Tooltip
+              contentStyle={colors.tooltip}
               formatter={(value) => settings.format(Number(value))}
               labelFormatter={(label) => `Período: ${label}`}
             />
@@ -123,7 +126,7 @@ export function RevenueEvolutionChart({
               type="monotone"
               dataKey="atual"
               name="Período atual"
-              stroke="#635bdf"
+              stroke={colors.accent}
               fill="url(#revenueFill)"
               strokeWidth={2}
             />
@@ -131,7 +134,7 @@ export function RevenueEvolutionChart({
               type="monotone"
               dataKey="anterior"
               name="Período anterior"
-              stroke="#9ca3af"
+              stroke={colors.muted}
               fill="transparent"
               strokeDasharray="5 4"
               strokeWidth={2}

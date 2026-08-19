@@ -12,11 +12,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useChartColors } from "../../theme/useChartColors";
 import type { AnalyticsFilters, BreakdownsResponse } from "../../types/analytics";
 import { QueryState } from "../feedback/QueryState";
 import { ExportButtons } from "../tables/ExportButtons";
 
-const COLORS = ["#635bdf", "#2ba77a", "#e9a23b", "#d05261", "#438acb", "#8a63d2"];
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -32,6 +32,8 @@ export function CommercialBreakdownCharts({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const colors = useChartColors();
+  const series = colors.series;
 
   const filterOrders = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(location.search);
@@ -70,10 +72,13 @@ export function CommercialBreakdownCharts({
                 }}
               >
                 {data.statuses.map((status, index) => (
-                  <Cell key={status.status} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={status.status} fill={series[index % series.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => Number(value).toLocaleString("pt-BR")} />
+              <Tooltip
+                contentStyle={colors.tooltip}
+                formatter={(value) => Number(value).toLocaleString("pt-BR")}
+              />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -114,10 +119,13 @@ export function CommercialBreakdownCharts({
                 }}
               >
                 {data.productAbc.map((item, index) => (
-                  <Cell key={item.class} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={item.class} fill={series[index % series.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => money.format(Number(value))} />
+              <Tooltip
+                contentStyle={colors.tooltip}
+                formatter={(value) => money.format(Number(value))}
+              />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -142,12 +150,12 @@ export function CommercialBreakdownCharts({
         <div className="chart-wrap" role="img" aria-label="Pedidos por faixa de valor">
           <ResponsiveContainer width="100%" height={310}>
             <BarChart data={data.orderValueBands}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="band" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
+              <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="band" tick={colors.axis} />
+              <YAxis allowDecimals={false} tick={colors.axis} />
+              <Tooltip contentStyle={colors.tooltip} />
               <Legend />
-              <Bar dataKey="orders" name="Pedidos" fill="#635bdf" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="orders" name="Pedidos" fill={colors.accent} radius={[5, 5, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

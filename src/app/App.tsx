@@ -13,6 +13,7 @@ import { GlobalFilterBar } from "../components/filters/GlobalFilterBar";
 import { QueryState } from "../components/feedback/QueryState";
 import { useAnalyticsFilters } from "../hooks/useAnalyticsFilters";
 import { DataQualityPage } from "../pages/DataQualityPage";
+import { AppearanceSelect } from "../theme/AppearanceSelect";
 import { lazyPage } from "./lazyPage";
 
 const LegacyDashboard = lazyPage(() =>
@@ -149,6 +150,7 @@ export function App() {
             {isAnalyticsRoute && <p>Período atual: {periodLabel}</p>}
           </div>
           <div className="user-menu">
+            <AppearanceSelect />
             <span>
               {user.username} · {user.role}
             </span>

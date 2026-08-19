@@ -6,6 +6,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { useChartColors } from "../../theme/useChartColors";
 import type { AnalyticsFilters, OverviewResponse } from "../../types/analytics";
 import { QueryState } from "../feedback/QueryState";
 import { ExportButtons } from "../tables/ExportButtons";
@@ -17,6 +18,7 @@ export function BuyerCompositionChart({
   data: OverviewResponse;
   filters: AnalyticsFilters;
 }) {
+  const colors = useChartColors();
   const rows = [
     { name: "Novos", value: data.kpis.newBuyers?.value || 0 },
     { name: "Recorrentes", value: data.kpis.recurringBuyers?.value || 0 },
@@ -47,10 +49,13 @@ export function BuyerCompositionChart({
               outerRadius={105}
               paddingAngle={3}
             >
-              <Cell fill="#635bdf" />
-              <Cell fill="#3db68a" />
+              <Cell fill={colors.accent} />
+              <Cell fill={colors.positive} />
             </Pie>
-            <Tooltip formatter={(value) => Number(value).toLocaleString("pt-BR")} />
+            <Tooltip
+              contentStyle={colors.tooltip}
+              formatter={(value) => Number(value).toLocaleString("pt-BR")}
+            />
             <Legend />
           </PieChart>
         </ResponsiveContainer>

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthProvider";
+import { AppearanceSelect } from "../theme/AppearanceSelect";
 
 export function LoginPage() {
   const { signIn } = useAuth();
@@ -50,6 +51,7 @@ export function LoginPage() {
         <button type="submit" disabled={submitting}>
           {submitting ? "Entrando…" : "Entrar"}
         </button>
+        <AppearanceSelect />
       </form>
     </main>
   );

@@ -13,6 +13,7 @@ import { analyticsApi } from "../api/client";
 import { RankingCharts } from "../components/charts/RankingCharts";
 import { MetadataStatus, QueryState } from "../components/feedback/QueryState";
 import { ExportButtons } from "../components/tables/ExportButtons";
+import { useChartColors } from "../theme/useChartColors";
 import type { AnalyticsFilters } from "../types/analytics";
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -22,6 +23,7 @@ const money = new Intl.NumberFormat("pt-BR", {
 });
 
 export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
+  const colors = useChartColors();
   const geography = useQuery({
     queryKey: ["analytics", "geography", filters],
     queryFn: () => analyticsApi.geography(filters),
@@ -68,12 +70,12 @@ export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
           <div className="chart-wrap" role="img" aria-label="Faturamento por estado">
             <ResponsiveContainer width="100%" height={310}>
               <BarChart data={geography.data.states.slice(0, 15)}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="state" />
-                <YAxis tickFormatter={(value) => money.format(Number(value))} />
-                <Tooltip formatter={(value) => money.format(Number(value))} />
+                <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="state" tick={colors.axis} />
+                <YAxis tickFormatter={(value) => money.format(Number(value))} tick={colors.axis} />
+                <Tooltip contentStyle={colors.tooltip} formatter={(value) => money.format(Number(value))} />
                 <Legend />
-                <Bar dataKey="revenue" name="Faturamento" fill="#635bdf" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="revenue" name="Faturamento" fill={colors.accent} radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -95,12 +97,12 @@ export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
                 }))}
                 layout="vertical"
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tickFormatter={(value) => money.format(Number(value))} />
-                <YAxis type="category" dataKey="label" width={120} />
-                <Tooltip formatter={(value) => money.format(Number(value))} />
+                <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tickFormatter={(value) => money.format(Number(value))} tick={colors.axis} />
+                <YAxis type="category" dataKey="label" width={120} tick={colors.axis} />
+                <Tooltip contentStyle={colors.tooltip} formatter={(value) => money.format(Number(value))} />
                 <Legend />
-                <Bar dataKey="revenue" name="Faturamento" fill="#438acb" radius={[0, 5, 5, 0]} />
+                <Bar dataKey="revenue" name="Faturamento" fill={colors.blue} radius={[0, 5, 5, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -147,7 +149,9 @@ export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
                     return (
                       <td
                         key={`${cohort.cohort}-${month.key}`}
-                        style={{ backgroundColor: `rgb(99 91 223 / ${rate / 120})` }}
+                        style={{
+                          backgroundColor: `color-mix(in srgb, var(--chart-1) ${Math.min(rate, 72)}%, transparent)`,
+                        }}
                       >
                         {rate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
                       </td>

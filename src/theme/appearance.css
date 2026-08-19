@@ -1,0 +1,424 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f7fb;
+  --bg-elevated: #ffffff;
+  --bg-muted: #fafbfc;
+  --bg-hover: #f7f7fd;
+  --bg-nested: #fbfbfd;
+  --text: #202739;
+  --text-muted: #747d90;
+  --text-subtle: #8a92a1;
+  --text-heading: #31394a;
+  --border: #e2e5ed;
+  --border-strong: #dfe2ea;
+  --accent: #5c5ee0;
+  --accent-strong: #4749c8;
+  --accent-soft: #eeeefe;
+  --accent-text: #3f46c8;
+  --accent-chip: #595bd1;
+  --on-accent: #ffffff;
+  --sidebar: #18192d;
+  --sidebar-text: #a7abc1;
+  --sidebar-muted: #8d92aa;
+  --sidebar-active: #2d2e4d;
+  --positive: #248a67;
+  --negative: #c84f5a;
+  --success-bg: #f2faf7;
+  --success-border: #cfe5dd;
+  --success-text: #258565;
+  --warning-bg: #fff9ec;
+  --warning-border: #efd9a5;
+  --warning-text: #805b1d;
+  --error-bg: #fff4f5;
+  --error-border: #efc2c6;
+  --error-text: #9f3440;
+  --chip: #eef0f6;
+  --chip-text: #596174;
+  --shadow: #10182824;
+  --input-bg: #ffffff;
+  --drawer-scrim: #13162480;
+  --chart-1: #635bdf;
+  --chart-2: #3db68a;
+  --chart-3: #438acb;
+  --chart-4: #e9a23b;
+  --chart-5: #d05261;
+  --chart-6: #8a63d2;
+  --chart-muted: #9ca3af;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101218;
+  --bg-elevated: #1a1c28;
+  --bg-muted: #161822;
+  --bg-hover: #242736;
+  --bg-nested: #14161f;
+  --text: #e8eaf2;
+  --text-muted: #9aa3b5;
+  --text-subtle: #7d8698;
+  --text-heading: #d5d8e4;
+  --border: #2c3040;
+  --border-strong: #3a3f52;
+  --accent: #7b7ef0;
+  --accent-strong: #6a6de6;
+  --accent-soft: #2a2d4a;
+  --accent-text: #b0b3ff;
+  --accent-chip: #a7a9ff;
+  --on-accent: #ffffff;
+  --sidebar: #0d0e16;
+  --sidebar-text: #b4b8cc;
+  --sidebar-muted: #8d92aa;
+  --sidebar-active: #2a2c44;
+  --positive: #4ec99a;
+  --negative: #f07a84;
+  --success-bg: #15241e;
+  --success-border: #2d5a48;
+  --success-text: #4ec99a;
+  --warning-bg: #2a2316;
+  --warning-border: #6b5420;
+  --warning-text: #e2c07a;
+  --error-bg: #2a1619;
+  --error-border: #6b3339;
+  --error-text: #f0a0a8;
+  --chip: #2a2d3c;
+  --chip-text: #c2c8d8;
+  --shadow: #00000066;
+  --input-bg: #14161f;
+  --drawer-scrim: #00000099;
+  --chart-1: #7b7ef0;
+  --chart-2: #4ec99a;
+  --chart-3: #5aa3e0;
+  --chart-4: #e2c07a;
+  --chart-5: #f07a84;
+  --chart-6: #a78bfa;
+  --chart-muted: #9aa3b5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+[data-theme="dark"] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.appearance-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 128px;
+}
+.appearance-field > span {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.appearance-field select {
+  border: 1px solid var(--border-strong);
+  background: var(--input-bg);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 7px 8px;
+  font-size: 10px;
+}
+.login-card .appearance-field {
+  margin-top: 18px;
+}
+
+[data-theme="dark"] .new-app {
+  background: var(--bg);
+  color: var(--text);
+}
+[data-theme="dark"] .new-app > .app-sidebar {
+  background: var(--sidebar);
+}
+[data-theme="dark"] .brand-block span,
+[data-theme="dark"] .app-sidebar nav a {
+  color: var(--sidebar-text);
+}
+[data-theme="dark"] .app-sidebar nav a:hover,
+[data-theme="dark"] .app-sidebar nav a.active {
+  background: var(--sidebar-active);
+  color: #fff;
+}
+[data-theme="dark"] .new-app .app-header,
+[data-theme="dark"] .global-filters,
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .module-card,
+[data-theme="dark"] .detail-drawer,
+[data-theme="dark"] .exclude-bar,
+[data-theme="dark"] .cohort-members-panel,
+[data-theme="dark"] .column-selector > div,
+[data-theme="dark"] .login-card,
+[data-theme="dark"] .quality-status,
+[data-theme="dark"] .quality-coverage,
+[data-theme="dark"] .kpi,
+[data-theme="dark"] .card {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .app-header small,
+[data-theme="dark"] .app-header p,
+[data-theme="dark"] .user-menu span,
+[data-theme="dark"] .filter-field > span,
+[data-theme="dark"] .filter-field small,
+[data-theme="dark"] .filter-check,
+[data-theme="dark"] .module-heading p,
+[data-theme="dark"] .metric-card > span,
+[data-theme="dark"] .metric-card p,
+[data-theme="dark"] .table-note,
+[data-theme="dark"] .detail-drawer > p,
+[data-theme="dark"] .exclude-bar > p,
+[data-theme="dark"] .cohort-note,
+[data-theme="dark"] .cohort-members-panel li small,
+[data-theme="dark"] .cohort-members-panel > p,
+[data-theme="dark"] .login-card p {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .filter-heading button,
+[data-theme="dark"] .module-heading button,
+[data-theme="dark"] .module-heading input,
+[data-theme="dark"] .filter-field input,
+[data-theme="dark"] .filter-field select,
+[data-theme="dark"] .chart-action,
+[data-theme="dark"] .user-menu button,
+[data-theme="dark"] .drawer-close,
+[data-theme="dark"] .table-pagination select,
+[data-theme="dark"] .table-pagination button,
+[data-theme="dark"] .row-action,
+[data-theme="dark"] .breakdown-grid > .module-card > button,
+[data-theme="dark"] .exclude-bar-search input,
+[data-theme="dark"] .exclude-bar-results button,
+[data-theme="dark"] .login-card input,
+[data-theme="dark"] header label,
+[data-theme="dark"] header input,
+[data-theme="dark"] header button.secondary,
+[data-theme="dark"] .toolbar .export {
+  background: var(--input-bg);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+[data-theme="dark"] .filter-heading span {
+  background: var(--accent-soft);
+  color: var(--accent-chip);
+}
+[data-theme="dark"] .filter-chips button,
+[data-theme="dark"] .exclude-chips button {
+  background: var(--chip);
+  color: var(--accent-text);
+}
+[data-theme="dark"] .metadata-status {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+}
+[data-theme="dark"] .metadata-status strong {
+  color: var(--success-text);
+}
+[data-theme="dark"] .metadata-status span {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .metadata-status.partial,
+[data-theme="dark"] .sync-banner,
+[data-theme="dark"] .banner {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+[data-theme="dark"] .metadata-status.partial strong,
+[data-theme="dark"] .metadata-status small {
+  color: var(--warning-text);
+}
+[data-theme="dark"] .metric-card small.positive,
+[data-theme="dark"] .kpi small.up {
+  color: var(--positive);
+}
+[data-theme="dark"] .metric-card small.negative,
+[data-theme="dark"] .kpi small.down {
+  color: var(--negative);
+}
+[data-theme="dark"] .table-actions .row-action-solid,
+[data-theme="dark"] .data-table .row-action-solid,
+[data-theme="dark"] .row-action-solid,
+[data-theme="dark"] .state-panel button,
+[data-theme="dark"] .login-card > button,
+[data-theme="dark"] header button,
+[data-theme="dark"] .quality-status button,
+[data-theme="dark"] .sync-actions button,
+[data-theme="dark"] .banner button {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme="dark"] .table-actions .row-action-solid:hover,
+[data-theme="dark"] .data-table .row-action-solid:hover,
+[data-theme="dark"] .row-action-solid:hover {
+  background: var(--accent-strong);
+}
+[data-theme="dark"] .table-module .exclude-bar {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+[data-theme="dark"] .state-panel {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+[data-theme="dark"] .state-panel.error,
+[data-theme="dark"] .login-error,
+[data-theme="dark"] .banner.error {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+[data-theme="dark"] .data-table th {
+  background: var(--bg-muted);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+[data-theme="dark"] .data-table th button {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .data-table td {
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .data-table tbody tr:hover,
+[data-theme="dark"] .data-table.order-history tbody tr.is-expanded,
+[data-theme="dark"] .clickable-row:focus,
+[data-theme="dark"] .metric-grid.cohorts .cohort-toggle:hover,
+[data-theme="dark"] .metric-grid.cohorts .cohort-toggle[aria-expanded="true"] {
+  background: var(--bg-hover);
+}
+[data-theme="dark"] .data-table tbody tr.order-items-row,
+[data-theme="dark"] .data-table tbody tr.order-items-row:hover,
+[data-theme="dark"] .data-table tbody tr.order-items-row > td {
+  background: var(--bg-nested);
+}
+[data-theme="dark"] .data-table.nested-order-items tbody tr:hover {
+  background: var(--bg-elevated);
+}
+[data-theme="dark"] .order-expand,
+[data-theme="dark"] .row-action,
+[data-theme="dark"] .cohort-members-panel .cohort-toggle > small,
+[data-theme="dark"] .metric-grid.cohorts .cohort-toggle > small {
+  color: var(--accent-text);
+}
+[data-theme="dark"] .drawer-backdrop {
+  background: var(--drawer-scrim);
+}
+[data-theme="dark"] .login-page {
+  background: linear-gradient(135deg, #0d0e16, #23255a);
+}
+[data-theme="dark"] .login-card small {
+  color: var(--accent-chip);
+}
+[data-theme="dark"] .login-card label {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .column-selector > div {
+  box-shadow: 0 12px 30px var(--shadow);
+}
+[data-theme="dark"] .metric-grid.compact article,
+[data-theme="dark"] .metric-grid.cohorts article {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+}
+[data-theme="dark"] .metric-grid.cohorts span,
+[data-theme="dark"] .metric-grid.compact span {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .metric-grid.cohorts span em,
+[data-theme="dark"] .metric-grid.cohorts dt {
+  color: var(--text-subtle);
+}
+[data-theme="dark"] .metric-grid.cohorts .cohort-total,
+[data-theme="dark"] .cohort-heading,
+[data-theme="dark"] .cohort-members-panel li span,
+[data-theme="dark"] .metric-grid.cohorts dd {
+  color: var(--text);
+}
+[data-theme="dark"] .metric-grid.cohorts article.rest {
+  border-color: var(--border);
+  background: var(--bg-muted);
+}
+[data-theme="dark"] .cohort-members-panel .cohort-member-row > button:first-child {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .cohort-members-panel .cohort-member-row > button:first-child:hover,
+[data-theme="dark"] .cohort-members-panel .cohort-member-row > button:first-child:focus,
+[data-theme="dark"] .exclude-bar-results button:hover,
+[data-theme="dark"] .exclude-bar-results button:focus,
+[data-theme="dark"] .row-action:hover,
+[data-theme="dark"] .row-action:focus {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+[data-theme="dark"] .skip-link {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+[data-theme="dark"] header {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+[data-theme="dark"] header p,
+[data-theme="dark"] .card > p,
+[data-theme="dark"] .kpi > span,
+[data-theme="dark"] .muted,
+[data-theme="dark"] .empty {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .toolbar > div {
+  background: var(--chip);
+}
+[data-theme="dark"] .toolbar div button.on {
+  background: var(--bg-elevated);
+}
+[data-theme="dark"] th {
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
+[data-theme="dark"] td,
+[data-theme="dark"] .rank {
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .quality-status.partial {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+}
+[data-theme="dark"] .quality-status.healthy {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+}
+[data-theme="dark"] .quality-status small,
+[data-theme="dark"] .quality-coverage > span,
+[data-theme="dark"] .quality-coverage small,
+[data-theme="dark"] .quality-metrics span,
+[data-theme="dark"] .quality-status p {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .quality-progress {
+  background: var(--chip);
+}
+[data-theme="dark"] .quality-metrics > div {
+  border-color: var(--border);
+}
+[data-theme="dark"] .quality-warnings ul {
+  color: var(--warning-text);
+}
+[data-theme="dark"] .donut:before {
+  background: var(--bg-elevated);
+}
+[data-theme="dark"] .recharts-default-tooltip {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+[data-theme="dark"] .recharts-legend-item-text,
+[data-theme="dark"] .recharts-cartesian-axis-tick-value {
+  fill: var(--text-muted);
+  color: var(--text-muted);
+}

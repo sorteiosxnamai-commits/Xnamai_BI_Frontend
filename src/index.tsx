@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./app/App";
 import { AuthProvider } from "./auth/AuthProvider";
+import { AppearanceProvider } from "./theme/AppearanceProvider";
 import "./style.css";
 import "./app/app.css";
+import "./theme/appearance.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,9 +26,11 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <AppearanceProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AppearanceProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>
