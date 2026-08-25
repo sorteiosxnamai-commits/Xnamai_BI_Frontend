@@ -503,7 +503,8 @@ export function CrmLeadsPage() {
 
   useEffect(() => {
     if (!data) return;
-    if (queuePage === 1) {
+    const responsePage = data.queuePage ?? 1;
+    if (responsePage <= 1) {
       setQueueItems(data.queue);
       return;
     }
@@ -512,7 +513,8 @@ export function CrmLeadsPage() {
       const extra = data.queue.filter((lead) => !known.has(lead.id));
       return extra.length ? [...current, ...extra] : current;
     });
-  }, [data, queuePage]);
+  }, [data]);
+
   const detailQuery = useQuery({
     queryKey: ["crm-lead", selectedId],
     queryFn: () => crmApi.lead(selectedId as string),
@@ -629,7 +631,7 @@ export function CrmLeadsPage() {
       </section>
 
       <QueryState
-        loading={leadsQuery.isLoading}
+        loading={leadsQuery.isLoading && queuePage === 1}
         error={leadsQuery.error instanceof Error ? leadsQuery.error : null}
         onRetry={() => void leadsQuery.refetch()}
       />
@@ -640,7 +642,7 @@ export function CrmLeadsPage() {
             <div className="module-heading">
               <div>
                 <h2>Top 20</h2>
-                <p>Alto faturamento e mais tempo sem comprar  â€”  maior potencial de recuperacao.</p>
+                <p>Alto faturamento e mais tempo sem comprar  —  maior potencial de recuperacao.</p>
               </div>
             </div>
             <div className="crm-lead-grid">
@@ -727,7 +729,7 @@ export function CrmLeadsPage() {
                 Clientes com historico de compra priorizados pela IA (faturamento, recencia, frequencia,
                 segmento e mix de produtos). Maior pontuacao = maior chance de recompra agora.
                 {data.aiPending
-                  ? ` Analisando em lotes de 40  â€”  ${num(data.aiPending)} ainda na fila de analise.`
+                  ? ` Analisando em lotes de 40  —  ${num(data.aiPending)} ainda na fila de analise.`
                   : ""}
               </p>
             </div>
