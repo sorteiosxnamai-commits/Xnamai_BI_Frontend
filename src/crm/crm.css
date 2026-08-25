@@ -323,6 +323,10 @@
   padding: 10px 0;
   border-bottom: 1px solid #edf0f4;
 }
+.crm-recent strong,
+.crm-recent small {
+  display: block;
+}
 .crm-recent strong {
   color: var(--text);
   font-weight: 800;
