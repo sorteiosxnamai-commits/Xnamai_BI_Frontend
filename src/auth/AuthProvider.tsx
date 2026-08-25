@@ -17,6 +17,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const path = window.location.pathname;
+    const publicRoute =
+      path === "/" || path === "/home" || path.startsWith("/crm");
+    if (publicRoute) {
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const session = await refreshSession();
