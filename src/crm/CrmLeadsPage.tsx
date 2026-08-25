@@ -604,7 +604,7 @@ export function CrmLeadsPage() {
             <div className="module-heading">
               <div>
                 <h2>Top 20</h2>
-                <p>Maiores faturamentos ainda disponiveis para atendimento.</p>
+                <p>Alto faturamento e mais tempo sem comprar — maior potencial de recuperacao.</p>
               </div>
             </div>
             <div className="crm-lead-grid">
