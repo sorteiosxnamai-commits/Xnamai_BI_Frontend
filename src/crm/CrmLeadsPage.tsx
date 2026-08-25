@@ -354,10 +354,17 @@ function LeadDetail({
 
   useEffect(() => {
     setSellerName(lead.claimedBy || defaultSeller);
-  }, [lead.claimedBy, defaultSeller, lead.id]);
+    setNotes(lead.notes || "");
+    setSaleValue("");
+    setOrderNumber("");
+    setOutcome("won");
+  }, [lead.id, lead.claimedBy, lead.notes, defaultSeller]);
 
   const updateSeller = (value: string) => {
     setSellerName(value);
+  };
+
+  const commitSeller = (value: string) => {
     onSellerChange(value);
   };
 
@@ -407,6 +414,7 @@ function LeadDetail({
           <input
             value={sellerName}
             onChange={(event) => updateSeller(event.target.value)}
+            onBlur={(event) => commitSeller(event.target.value)}
             placeholder="Ex.: Ana Souza"
             disabled={inFocus && Boolean(lead.claimedBy)}
           />
