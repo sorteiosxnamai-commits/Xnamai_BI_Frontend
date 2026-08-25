@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EntityDetailDrawer } from "../components/feedback/EntityDetailDrawer";
 import { QueryState } from "../components/feedback/QueryState";
 import { money, moneyExact, num, relativeTime, statusLabel } from "../format";
@@ -281,14 +281,37 @@ function LeadDetail({
 export function CrmLeadsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"main" | "new">("main");
+  const [queuePage, setQueuePage] = useState(1);
+  const [queueItems, setQueueItems] = useState<CrmLead[]>([]);
   const [sellerName, setSellerName] = useState(readSeller);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setQueuePage(1);
+    setQueueItems([]);
+  }, [search, view]);
+
   const leadsQuery = useQuery({
-    queryKey: ["crm-leads", search],
-    queryFn: () => crmApi.leads(search, 20),
+    queryKey: ["crm-leads", search, view, queuePage],
+    queryFn: () => crmApi.leads({ search, top: 20, view, queuePage }),
     retry: false,
   });
+
+  const data = leadsQuery.data;
+
+  useEffect(() => {
+    if (!data) return;
+    if (queuePage === 1) {
+      setQueueItems(data.queue);
+      return;
+    }
+    setQueueItems((current) => {
+      const known = new Set(current.map((lead) => lead.id));
+      const extra = data.queue.filter((lead) => !known.has(lead.id));
+      return extra.length ? [...current, ...extra] : current;
+    });
+  }, [data, queuePage]);
   const detailQuery = useQuery({
     queryKey: ["crm-lead", selectedId],
     queryFn: () => crmApi.lead(selectedId as string),
@@ -299,6 +322,8 @@ export function CrmLeadsPage() {
     mutationFn: () => crmApi.claim(selectedId as string, sellerName.trim()),
     onSuccess: (detail) => {
       queryClient.setQueryData(["crm-lead", selectedId], detail);
+      setQueuePage(1);
+      setQueueItems([]);
       void queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
     },
   });
@@ -306,19 +331,21 @@ export function CrmLeadsPage() {
     mutationFn: (notes: string) => crmApi.finish(selectedId as string, sellerName.trim(), notes),
     onSuccess: () => {
       setSelectedId(null);
+      setQueuePage(1);
+      setQueueItems([]);
       void queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       void queryClient.invalidateQueries({ queryKey: ["crm-dashboard"] });
     },
   });
 
-  const data = leadsQuery.data;
   const busy = claimMutation.isPending || finishMutation.isPending;
   const actionError = claimMutation.error || finishMutation.error;
+  const loadingMore = leadsQuery.isFetching && queuePage > 1;
 
   const preview = useMemo(() => {
     if (!data || !selectedId) return null;
-    return [...data.top, ...data.queue].find((lead) => lead.id === selectedId) || null;
-  }, [data, selectedId]);
+    return [...data.top, ...queueItems].find((lead) => lead.id === selectedId) || null;
+  }, [data, queueItems, selectedId]);
 
   return (
     <div className="page-stack crm-leads">
@@ -344,11 +371,36 @@ export function CrmLeadsPage() {
         </label>
         <p>
           {data
-            ? `${num(data.count)} na fila | ${num(data.open)} livres | ${num(data.inProgress)} em atendimento`
+            ? view === "new"
+              ? `${num(data.count)} sem compra | ${num(data.open)} livres | ${num(data.inProgress)} em atendimento`
+              : `${num(data.count)} na fila | ${num(data.open)} livres | ${num(data.inProgress)} em atendimento${
+                  data.newCount ? ` | ${num(data.newCount)} nunca compraram` : ""
+                }`
             : leadsQuery.isError
               ? "Nao foi possivel carregar a fila"
               : "Carregando fila..."}
         </p>
+        <div className="crm-view-tabs" role="tablist" aria-label="Visao da fila">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "main"}
+            className={view === "main" ? "active" : ""}
+            onClick={() => setView("main")}
+          >
+            Fila principal
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "new"}
+            className={view === "new" ? "active" : ""}
+            onClick={() => setView("new")}
+          >
+            Leads novos
+            {data?.newCount != null ? ` (${num(data.newCount)})` : ""}
+          </button>
+        </div>
       </section>
 
       <QueryState
@@ -357,7 +409,7 @@ export function CrmLeadsPage() {
         onRetry={() => void leadsQuery.refetch()}
       />
 
-      {data && (
+      {data && view === "main" && (
         <>
           <section>
             <div className="module-heading">
@@ -384,18 +436,61 @@ export function CrmLeadsPage() {
                 <h2>Fila</h2>
                 <p>
                   Demais clientes fora do Top 20. Quem finalizar o atendimento sai da lista.
-                  {data.hidden ? ` Mais ${data.hidden} fora desta tela - use a busca.` : ""}
+                  {data.queueTotal
+                    ? ` Mostrando ${num(queueItems.length)} de ${num(data.queueTotal)}.`
+                    : ""}
                 </p>
               </div>
             </div>
             <div className="crm-lead-grid">
-              {data.queue.map((lead) => (
+              {queueItems.map((lead) => (
                 <LeadCard key={lead.id} lead={lead} onOpen={() => setSelectedId(lead.id)} />
               ))}
-              {!data.queue.length && <p className="crm-empty">Fila vazia alem do Top 20.</p>}
+              {!queueItems.length && <p className="crm-empty">Fila vazia alem do Top 20.</p>}
             </div>
+            {data.hasMore && (
+              <div className="crm-load-more">
+                <button
+                  type="button"
+                  className="row-action"
+                  disabled={loadingMore}
+                  onClick={() => setQueuePage((page) => page + 1)}
+                >
+                  {loadingMore ? "Carregando..." : "Carregar mais"}
+                </button>
+              </div>
+            )}
           </section>
         </>
+      )}
+
+      {data && view === "new" && (
+        <section>
+          <div className="module-heading">
+            <div>
+              <h2>Leads novos</h2>
+              <p>Clientes cadastrados que nunca compraram. Ordenados do cadastro mais recente.</p>
+            </div>
+          </div>
+          <div className="crm-lead-grid">
+            {queueItems.map((lead) => (
+              <LeadCard key={lead.id} lead={lead} onOpen={() => setSelectedId(lead.id)} />
+            ))}
+            {!queueItems.length && <p className="crm-empty">Nenhum lead sem compra encontrado.</p>}
+          </div>
+          {data.hasMore && (
+            <div className="crm-load-more">
+              <button
+                type="button"
+                className="row-action"
+                disabled={loadingMore}
+                onClick={() => setQueuePage((page) => page + 1)}
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais"}
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       {selectedId && (

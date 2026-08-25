@@ -64,6 +64,8 @@ const sample = {
   ],
   inProgress: 0,
   open: 2,
+  queueTotal: 1,
+  hasMore: false,
 };
 
 test("lista Top 20 separado da fila e permite finalizar atendimento", async () => {

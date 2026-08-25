@@ -70,13 +70,26 @@ export type CrmLeadDetail = CrmLead & {
 };
 
 export type CrmLeadsResponse = {
+  view?: "main" | "new";
   count: number;
+  newCount?: number;
   topCount: number;
   top: CrmLead[];
   queue: CrmLead[];
-  hidden?: number;
+  queuePage?: number;
+  queuePageSize?: number;
+  queueTotal?: number;
+  hasMore?: boolean;
   inProgress: number;
   open: number;
+};
+
+export type CrmLeadsParams = {
+  search?: string;
+  top?: number;
+  view?: "main" | "new";
+  queuePage?: number;
+  queuePageSize?: number;
 };
 
 export type CrmDashboard = {
@@ -129,8 +142,19 @@ async function crmRequest<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const crmApi = {
   configured: Boolean(API_URL),
-  leads: (search = "", top = 20) => {
-    const params = new URLSearchParams({ top: String(top) });
+  leads: ({
+    search = "",
+    top = 20,
+    view = "main",
+    queuePage = 1,
+    queuePageSize = 40,
+  }: CrmLeadsParams = {}) => {
+    const params = new URLSearchParams({
+      top: String(top),
+      view,
+      queuePage: String(queuePage),
+      queuePageSize: String(queuePageSize),
+    });
     if (search.trim()) params.set("search", search.trim());
     return crmRequest<CrmLeadsResponse>(`/api/v1/crm/leads?${params}`);
   },
