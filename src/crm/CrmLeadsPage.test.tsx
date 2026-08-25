@@ -2,10 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
-const { leads, lead, finish } = vi.hoisted(() => ({
+const { leads, lead, finish, claim } = vi.hoisted(() => ({
   leads: vi.fn(),
   lead: vi.fn(),
   finish: vi.fn(),
+  claim: vi.fn(),
 }));
 
 vi.mock("./crmApi", () => ({
@@ -13,7 +14,7 @@ vi.mock("./crmApi", () => ({
     configured: true,
     leads,
     lead,
-    claim: vi.fn(),
+    claim,
     finish,
     dashboard: vi.fn(),
   },
@@ -69,16 +70,18 @@ const sample = {
   queueTotal: 1,
 };
 
-test("lista Top 20 separado da fila e permite finalizar atendimento", async () => {
+test("lista Top 20 separado da fila e permite concluir atendimento com venda", async () => {
   leads.mockResolvedValue(sample);
   lead.mockResolvedValue({
     ...sample.top[0],
+    attendanceStatus: "in_progress",
+    claimedBy: "Ana",
     mostBoughtProducts: [{ name: "Fone X", quantity: 3, revenue: 300, total: 300 }],
     orderHistory: [
       { id: "o1", number: "100", status: "2", date: "2026-08-01", total: 5000, items: [] },
     ],
   });
-  finish.mockResolvedValue({ id: "c-top", status: "finished" });
+  finish.mockResolvedValue({ id: "c-top", status: "finished", outcome: "won" });
 
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -88,12 +91,12 @@ test("lista Top 20 separado da fila e permite finalizar atendimento", async () =
   );
 
   expect(await screen.findByText("Top Cliente")).toBeInTheDocument();
-  expect(screen.getByText("Fila Cliente")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Top Cliente/ }));
-  expect(await screen.findByText("Ultimos produtos comprados")).toBeInTheDocument();
+  expect(await screen.findByText("Encerrar atendimento")).toBeInTheDocument();
 
-  fireEvent.change(screen.getByPlaceholderText("Ex.: Ana Souza"), { target: { value: "Ana" } });
-  fireEvent.click(screen.getByRole("button", { name: "Finalizar atendimento" }));
+  fireEvent.change(screen.getByPlaceholderText("0,00"), { target: { value: "1500" } });
+  fireEvent.change(screen.getByPlaceholderText("Ex.: 89047"), { target: { value: "89047" } });
+  fireEvent.click(screen.getByRole("button", { name: "Concluir atendimento" }));
 
   await waitFor(() => expect(finish).toHaveBeenCalled());
 });

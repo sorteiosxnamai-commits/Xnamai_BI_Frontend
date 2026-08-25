@@ -122,6 +122,23 @@ export type CrmLeadAnalysisResponse = {
   generatedAt?: string | null;
 };
 
+export type CrmFinishPayload = {
+  sellerName: string;
+  outcome: "won" | "lost" | "discarded";
+  notes?: string;
+  saleValue?: number;
+  orderNumber?: string;
+};
+
+export type CrmFinishResponse = {
+  id: string;
+  status: string;
+  outcome: string;
+  saleValue?: number | null;
+  orderNumber?: string | null;
+  finishedAt?: string | null;
+};
+
 export type CrmDashboard = {
   periodDays: number;
   kpis: {
@@ -130,20 +147,25 @@ export type CrmDashboard = {
     finishedToday: number;
     finishedMonth: number;
     finishedPeriod: number;
+    salesWonPeriod: number;
+    salesValuePeriod: number;
     billingOpen: number;
     billingFinished: number;
     billingFinishedPeriod: number;
     averageHandleMinutes: number;
   };
-  series: { date: string; attendances: number; revenue: number }[];
+  series: { date: string; attendances: number; revenue: number; sales?: number }[];
   recentFinished: {
     id: string;
     name: string;
     sellerName: string | null;
     finishedAt: string | null;
+    outcome?: string | null;
+    saleValue?: number | null;
+    orderNumber?: string | null;
     revenue: number;
   }[];
-  sellers: { sellerName: string; attendances: number; revenue: number }[];
+  sellers: { sellerName: string; attendances: number; revenue: number; salesWon?: number }[];
 };
 
 async function crmRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -200,10 +222,16 @@ export const crmApi = {
       method: "POST",
       body: JSON.stringify({ sellerName }),
     }),
-  finish: (id: string, sellerName: string, notes?: string) =>
-    crmRequest<{ id: string; status: string }>(`/api/v1/crm/leads/${id}/finish`, {
+  finish: (id: string, payload: CrmFinishPayload) =>
+    crmRequest<CrmFinishResponse>(`/api/v1/crm/leads/${id}/finish`, {
       method: "POST",
-      body: JSON.stringify({ sellerName, notes }),
+      body: JSON.stringify({
+        sellerName: payload.sellerName,
+        outcome: payload.outcome,
+        notes: payload.notes,
+        saleValue: payload.saleValue,
+        orderNumber: payload.orderNumber,
+      }),
     }),
   dashboard: (days = 30) => crmRequest<CrmDashboard>(`/api/v1/crm/dashboard?days=${days}`),
 };

@@ -310,9 +310,11 @@ function LeadAnalysis({
 
 function LeadDetail({
   lead,
-  sellerName,
-  onClaim,
+  defaultSeller,
+  onSellerChange,
+  onStartFocus,
   onFinish,
+  onDiscard,
   busy,
   actionError,
   analysisData,
@@ -323,9 +325,17 @@ function LeadDetail({
   analysisRefreshing,
 }: {
   lead: CrmLeadDetail;
-  sellerName: string;
-  onClaim: () => void;
-  onFinish: (notes: string) => void;
+  defaultSeller: string;
+  onSellerChange: (value: string) => void;
+  onStartFocus: (sellerName: string) => void;
+  onFinish: (payload: {
+    sellerName: string;
+    outcome: "won" | "lost";
+    notes?: string;
+    saleValue?: number;
+    orderNumber?: string;
+  }) => void;
+  onDiscard: (payload: { sellerName: string; notes: string }) => void;
   busy: boolean;
   actionError: string;
   analysisData: CrmLeadAnalysisResponse | undefined;
@@ -335,7 +345,22 @@ function LeadDetail({
   onAnalysisRefresh: () => void;
   analysisRefreshing: boolean;
 }) {
+  const inFocus = lead.attendanceStatus === "in_progress";
+  const [sellerName, setSellerName] = useState(lead.claimedBy || defaultSeller);
+  const [outcome, setOutcome] = useState<"won" | "lost">("won");
+  const [saleValue, setSaleValue] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
   const [notes, setNotes] = useState(lead.notes || "");
+
+  useEffect(() => {
+    setSellerName(lead.claimedBy || defaultSeller);
+  }, [lead.claimedBy, defaultSeller, lead.id]);
+
+  const updateSeller = (value: string) => {
+    setSellerName(value);
+    onSellerChange(value);
+  };
+
   const extras: [string, string][] = [
     ["Razao social", lead.legalName || lead.name],
     ["Nome fantasia", lead.tradeName || "--"],
@@ -367,7 +392,37 @@ function LeadDetail({
     ["Atualizado na origem", when(lead.updatedAtSource)],
   ];
   return (
-    <div className="crm-detail">
+    <div className={`crm-detail${inFocus ? " crm-detail-focus" : ""}`}>
+      <section className="crm-focus-bar">
+        <div>
+          <h3>{inFocus ? "Atendimento em foco" : "Preparar atendimento"}</h3>
+          <p>
+            {inFocus
+              ? "Registre o resultado ao encerrar ou descarte o lead com motivo."
+              : "Informe o vendedor e inicie para entrar no modo foco neste cliente."}
+          </p>
+        </div>
+        <label>
+          Vendedor responsavel
+          <input
+            value={sellerName}
+            onChange={(event) => updateSeller(event.target.value)}
+            placeholder="Ex.: Ana Souza"
+            disabled={inFocus && Boolean(lead.claimedBy)}
+          />
+        </label>
+        {!inFocus && (
+          <button
+            type="button"
+            className="row-action-solid"
+            disabled={busy || !sellerName.trim()}
+            onClick={() => onStartFocus(sellerName.trim())}
+          >
+            Iniciar atendimento
+          </button>
+        )}
+        {inFocus && <span className="crm-focus-badge">Em atendimento</span>}
+      </section>
       <p>
         {[lead.city, lead.state, lead.phone, lead.email].filter(Boolean).join(" | ") ||
           "Sem contato cadastrado"}
@@ -440,27 +495,103 @@ function LeadDetail({
           </details>
         ))}
       </section>
-      <section className="crm-actions">
-        <label>
-          Observacao do atendimento
-          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />
-        </label>
-        <div>
-          <button type="button" className="row-action-solid" disabled={busy || !sellerName.trim()} onClick={onClaim}>
-            Pegar lead
-          </button>
-          <button
-            type="button"
-            className="row-action"
-            disabled={busy || !sellerName.trim()}
-            onClick={() => onFinish(notes)}
-          >
-            Finalizar atendimento
-          </button>
-        </div>
-        {actionError && <div className="login-error">{actionError}</div>}
-        {!sellerName.trim() && <small>Informe seu nome no topo da lista para atender.</small>}
-      </section>
+      {inFocus && (
+        <section className="crm-actions crm-outcome-panel">
+          <h3>Encerrar atendimento</h3>
+          <div className="crm-outcome-options">
+            <label>
+              <input
+                type="radio"
+                name={`outcome-${lead.id}`}
+                checked={outcome === "won"}
+                onChange={() => setOutcome("won")}
+              />
+              Gerou venda
+            </label>
+            <label>
+              <input
+                type="radio"
+                name={`outcome-${lead.id}`}
+                checked={outcome === "lost"}
+                onChange={() => setOutcome("lost")}
+              />
+              Sem venda
+            </label>
+          </div>
+          {outcome === "won" && (
+            <div className="crm-outcome-fields">
+              <label>
+                Valor da venda (R$)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={saleValue}
+                  onChange={(event) => setSaleValue(event.target.value)}
+                  placeholder="0,00"
+                />
+              </label>
+              <label>
+                Numero do pedido
+                <input
+                  value={orderNumber}
+                  onChange={(event) => setOrderNumber(event.target.value)}
+                  placeholder="Ex.: 89047"
+                />
+              </label>
+            </div>
+          )}
+          <label>
+            Observacao do atendimento
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={3}
+              placeholder={
+                outcome === "won"
+                  ? "Detalhes da negociacao, produtos ofertados..."
+                  : "Motivo de nao ter fechado, proximo passo..."
+              }
+            />
+          </label>
+          <div className="crm-action-row">
+            <button
+              type="button"
+              className="row-action-solid"
+              disabled={busy || !sellerName.trim()}
+              onClick={() =>
+                onFinish({
+                  sellerName: sellerName.trim(),
+                  outcome,
+                  notes: notes.trim() || undefined,
+                  saleValue: outcome === "won" ? Number.parseFloat(saleValue.replace(",", ".")) : undefined,
+                  orderNumber: outcome === "won" ? orderNumber.trim() || undefined : undefined,
+                })
+              }
+            >
+              Concluir atendimento
+            </button>
+            <button
+              type="button"
+              className="row-action crm-discard-btn"
+              disabled={busy || !sellerName.trim() || !notes.trim()}
+              onClick={() =>
+                onDiscard({
+                  sellerName: sellerName.trim(),
+                  notes: notes.trim(),
+                })
+              }
+            >
+              Descartar lead
+            </button>
+          </div>
+          {!notes.trim() && (
+            <small className="muted">Para descartar, informe o motivo na observacao.</small>
+          )}
+          {actionError && <div className="login-error">{actionError}</div>}
+        </section>
+      )}
+      {!inFocus && actionError && <div className="login-error">{actionError}</div>}
     </div>
   );
 }
@@ -552,17 +683,15 @@ export function CrmLeadsPage() {
   });
 
   const claimMutation = useMutation({
-    mutationFn: () => crmApi.claim(selectedId as string, sellerName.trim()),
+    mutationFn: (seller: string) => crmApi.claim(selectedId as string, seller),
     onSuccess: (detail) => {
       queryClient.setQueryData(["crm-lead", selectedId], detail);
-      setQueuePage(1);
-      setQueueItems([]);
-      setHasMore(false);
       void queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
     },
   });
   const finishMutation = useMutation({
-    mutationFn: (notes: string) => crmApi.finish(selectedId as string, sellerName.trim(), notes),
+    mutationFn: (payload: Parameters<typeof crmApi.finish>[1]) =>
+      crmApi.finish(selectedId as string, payload),
     onSuccess: () => {
       setSelectedId(null);
       setQueuePage(1);
@@ -812,11 +941,22 @@ export function CrmLeadsPage() {
           {detailQuery.data && (
             <LeadDetail
               lead={detailQuery.data}
-              sellerName={sellerName}
+              defaultSeller={sellerName}
+              onSellerChange={(value) => {
+                setSellerName(value);
+                writeSeller(value);
+              }}
               busy={busy}
               actionError={actionError instanceof Error ? actionError.message : ""}
-              onClaim={() => claimMutation.mutate()}
-              onFinish={(notes) => finishMutation.mutate(notes)}
+              onStartFocus={(name) => claimMutation.mutate(name)}
+              onFinish={(payload) => finishMutation.mutate(payload)}
+              onDiscard={(payload) =>
+                finishMutation.mutate({
+                  sellerName: payload.sellerName,
+                  outcome: "discarded",
+                  notes: payload.notes,
+                })
+              }
               analysisData={analysisQuery.data}
               analysisLoading={analysisQuery.isLoading}
               analysisError={analysisQuery.error instanceof Error ? analysisQuery.error : null}

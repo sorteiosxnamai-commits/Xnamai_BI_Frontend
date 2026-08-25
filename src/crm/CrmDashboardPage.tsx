@@ -13,6 +13,12 @@ import { money, moneyExact, num, relativeTime } from "../format";
 import { useChartColors } from "../theme/useChartColors";
 import { crmApi } from "./crmApi";
 
+const OUTCOME_LABEL: Record<string, string> = {
+  won: "Gerou venda",
+  lost: "Sem venda",
+  discarded: "Descartado",
+};
+
 export function CrmDashboardPage() {
   const colors = useChartColors();
   const query = useQuery({
@@ -50,15 +56,20 @@ export function CrmDashboardPage() {
               </small>
             </article>
             <article className="metric-card">
+              <span>Vendas geradas (30d)</span>
+              <strong>{money(kpis.salesValuePeriod ?? 0)}</strong>
+              <small>{num(kpis.salesWonPeriod ?? 0)} vendas fechadas no periodo</small>
+            </article>
+            <article className="metric-card">
               <span>Faturamento da fila</span>
               <strong>{money(kpis.billingOpen)}</strong>
               <small>Potencial ainda aberto</small>
             </article>
             <article className="metric-card">
-              <span>Faturamento finalizado</span>
-              <strong>{money(kpis.billingFinishedPeriod)}</strong>
+              <span>Vendas registradas</span>
+              <strong>{money(kpis.salesValuePeriod ?? 0)}</strong>
               <small>
-                {money(kpis.billingFinished)} no historico | media{" "}
+                Potencial historico {money(kpis.billingFinishedPeriod)} | media{" "}
                 {kpis.averageHandleMinutes ? `${kpis.averageHandleMinutes} min` : "--"}
               </small>
             </article>
@@ -67,8 +78,8 @@ export function CrmDashboardPage() {
           <article className="module-card">
             <div className="module-heading">
               <div>
-                <h2>Atendimentos e faturamento</h2>
-                <p>Volume diario dos atendimentos finalizados nos ultimos {data.periodDays} dias.</p>
+                <h2>Atendimentos e vendas</h2>
+                <p>Volume diario de atendimentos finalizados e valor de vendas registradas nos ultimos {data.periodDays} dias.</p>
               </div>
             </div>
             {data.series.length ? (
@@ -82,7 +93,7 @@ export function CrmDashboardPage() {
                     <Tooltip
                       formatter={(value, name) =>
                         name === "revenue"
-                          ? [moneyExact(Number(value || 0)), "Faturamento"]
+                          ? [moneyExact(Number(value || 0)), "Vendas"]
                           : [num(Number(value || 0)), "Atendimentos"]
                       }
                     />
@@ -117,7 +128,7 @@ export function CrmDashboardPage() {
               <div className="module-heading">
                 <div>
                   <h2>Por vendedor</h2>
-                  <p>Atendimentos finalizados e faturamento associado ao cliente.</p>
+                  <p>Atendimentos finalizados e vendas registradas pelo vendedor.</p>
                 </div>
               </div>
               <table className="data-table">
@@ -125,7 +136,8 @@ export function CrmDashboardPage() {
                   <tr>
                     <th>Vendedor</th>
                     <th>Atendimentos</th>
-                    <th>Faturamento</th>
+                    <th>Vendas (R$)</th>
+                    <th>Vendas qtd</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -134,6 +146,7 @@ export function CrmDashboardPage() {
                       <td>{row.sellerName}</td>
                       <td>{num(row.attendances)}</td>
                       <td>{moneyExact(row.revenue)}</td>
+                      <td>{num(row.salesWon ?? 0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -153,7 +166,9 @@ export function CrmDashboardPage() {
                     <strong>{row.name}</strong>
                     <small>
                       {row.sellerName || "Sem vendedor"} | {relativeTime(row.finishedAt)} |{" "}
-                      {money(row.revenue)}
+                      {OUTCOME_LABEL[row.outcome || ""] || row.outcome || "Sem resultado"}
+                      {row.saleValue ? ` | ${money(row.saleValue)}` : ""}
+                      {row.orderNumber ? ` | Pedido #${row.orderNumber}` : ""}
                     </small>
                   </li>
                 ))}
