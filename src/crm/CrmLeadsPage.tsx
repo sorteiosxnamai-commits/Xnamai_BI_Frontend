@@ -109,7 +109,7 @@ function LeadCard({
       <dl>
         <div>
           <dt>Faturamento</dt>
-          <dd>{money(lead.revenue)}</dd>
+          <dd>{moneyExact(lead.revenue)}</dd>
         </div>
         <div>
           <dt>Pedidos</dt>
@@ -366,7 +366,7 @@ function LeadDetail({
       <div className="metric-grid compact">
         <article>
           <span>Faturamento</span>
-          <strong>{money(lead.revenue)}</strong>
+          <strong>{moneyExact(lead.revenue)}</strong>
         </article>
         <article>
           <span>Pedidos</span>
