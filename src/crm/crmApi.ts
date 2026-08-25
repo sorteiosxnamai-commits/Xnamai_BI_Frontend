@@ -36,6 +36,8 @@ export type CrmLead = {
   claimedBy?: string | null;
   claimedAt?: string | null;
   lastProducts: CrmProduct[];
+  aiScore?: number | null;
+  aiReason?: string | null;
 };
 
 export type CrmOrder = {
@@ -70,7 +72,7 @@ export type CrmLeadDetail = CrmLead & {
 };
 
 export type CrmLeadsResponse = {
-  view?: "main" | "new";
+  view?: "main" | "new" | "ai";
   count: number;
   newCount?: number;
   topCount: number;
@@ -82,14 +84,17 @@ export type CrmLeadsResponse = {
   hasMore?: boolean;
   inProgress: number;
   open: number;
+  aiScored?: number;
+  aiPending?: number;
 };
 
 export type CrmLeadsParams = {
   search?: string;
   top?: number;
-  view?: "main" | "new";
+  view?: "main" | "new" | "ai";
   queuePage?: number;
   queuePageSize?: number;
+  refreshAi?: boolean;
 };
 
 export type CrmLeadAnalysis = {
@@ -173,6 +178,7 @@ export const crmApi = {
     view = "main",
     queuePage = 1,
     queuePageSize = 40,
+    refreshAi = false,
   }: CrmLeadsParams = {}) => {
     const params = new URLSearchParams({
       top: String(top),
@@ -181,6 +187,7 @@ export const crmApi = {
       queuePageSize: String(queuePageSize),
     });
     if (search.trim()) params.set("search", search.trim());
+    if (refreshAi) params.set("refreshAi", "true");
     return crmRequest<CrmLeadsResponse>(`/api/v1/crm/leads?${params}`);
   },
   lead: (id: string) => crmRequest<CrmLeadDetail>(`/api/v1/crm/leads/${id}`),
