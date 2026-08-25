@@ -640,7 +640,7 @@ export function CrmLeadsPage() {
             <div className="module-heading">
               <div>
                 <h2>Top 20</h2>
-                <p>Alto faturamento e mais tempo sem comprar ÿ maior potencial de recuperacao.</p>
+                <p>Alto faturamento e mais tempo sem comprar  â€”  maior potencial de recuperacao.</p>
               </div>
             </div>
             <div className="crm-lead-grid">
@@ -727,7 +727,7 @@ export function CrmLeadsPage() {
                 Clientes com historico de compra priorizados pela IA (faturamento, recencia, frequencia,
                 segmento e mix de produtos). Maior pontuacao = maior chance de recompra agora.
                 {data.aiPending
-                  ? ` Analisando em lotes de 40 ÿ ${num(data.aiPending)} ainda na fila de analise.`
+                  ? ` Analisando em lotes de 40  â€”  ${num(data.aiPending)} ainda na fila de analise.`
                   : ""}
               </p>
             </div>
