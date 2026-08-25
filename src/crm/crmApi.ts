@@ -92,6 +92,31 @@ export type CrmLeadsParams = {
   queuePageSize?: number;
 };
 
+export type CrmLeadAnalysis = {
+  companyProfile?: string;
+  sector?: string;
+  website?: string | null;
+  publicProducts?: string[];
+  purchasePreferences?: string[];
+  approachStrategy?: string;
+  openingMessage?: string;
+  talkingPoints?: string[];
+  risksOrCautions?: string[];
+  sources?: { title: string; url: string }[];
+  confidence?: string;
+};
+
+export type CrmLeadAnalysisResponse = {
+  contact: {
+    phone?: string | null;
+    email?: string | null;
+    whatsappUrl?: string | null;
+  };
+  analysis: CrmLeadAnalysis;
+  cached: boolean;
+  generatedAt?: string | null;
+};
+
 export type CrmDashboard = {
   periodDays: number;
   kpis: {
@@ -159,6 +184,10 @@ export const crmApi = {
     return crmRequest<CrmLeadsResponse>(`/api/v1/crm/leads?${params}`);
   },
   lead: (id: string) => crmRequest<CrmLeadDetail>(`/api/v1/crm/leads/${id}`),
+  analyzeLead: (id: string, refresh = false) =>
+    crmRequest<CrmLeadAnalysisResponse>(
+      `/api/v1/crm/leads/${id}/analysis${refresh ? "?refresh=true" : ""}`,
+    ),
   claim: (id: string, sellerName: string) =>
     crmRequest<CrmLeadDetail>(`/api/v1/crm/leads/${id}/claim`, {
       method: "POST",

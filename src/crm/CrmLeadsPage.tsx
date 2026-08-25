@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EntityDetailDrawer } from "../components/feedback/EntityDetailDrawer";
 import { QueryState } from "../components/feedback/QueryState";
 import { money, moneyExact, num, relativeTime, statusLabel } from "../format";
-import { crmApi, type CrmLead, type CrmLeadDetail, type CrmProduct } from "./crmApi";
+import { crmApi, type CrmLead, type CrmLeadAnalysisResponse, type CrmLeadDetail, type CrmProduct } from "./crmApi";
 
 const SELLER_KEY = "crm-seller-name";
 
@@ -141,6 +141,164 @@ function LeadCard({
   );
 }
 
+function LeadAnalysis({
+  data,
+  loading,
+  error,
+  onRetry,
+  onRefresh,
+  refreshing,
+}: {
+  data: CrmLeadAnalysisResponse | undefined;
+  loading: boolean;
+  error: Error | null;
+  onRetry: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
+  if (loading) {
+    return (
+      <section className="crm-block crm-analysis">
+        <h3>Analise com IA</h3>
+        <p className="crm-empty">Gerando analise do cliente (pode levar ate 1 minuto)...</p>
+      </section>
+    );
+  }
+  if (error) {
+    return (
+      <section className="crm-block crm-analysis">
+        <h3>Analise com IA</h3>
+        <p className="login-error">{error.message}</p>
+        <button type="button" className="row-action" onClick={onRetry}>
+          Tentar novamente
+        </button>
+      </section>
+    );
+  }
+  if (!data) return null;
+
+  const { contact, analysis, cached, generatedAt } = data;
+  return (
+    <section className="crm-block crm-analysis">
+      <div className="crm-analysis-head">
+        <h3>Analise com IA</h3>
+        <div className="crm-analysis-actions">
+          {cached && <small className="muted">Cache {when(generatedAt)}</small>}
+          <button type="button" className="row-action" disabled={refreshing} onClick={onRefresh}>
+            {refreshing ? "Atualizando..." : "Atualizar analise"}
+          </button>
+        </div>
+      </div>
+      <div className="crm-analysis-contact">
+        {contact.whatsappUrl ? (
+          <a href={contact.whatsappUrl} target="_blank" rel="noreferrer" className="row-action-solid">
+            Abrir WhatsApp
+          </a>
+        ) : (
+          <span className="crm-empty">WhatsApp nao disponivel no cadastro</span>
+        )}
+        {contact.phone && <span>{contact.phone}</span>}
+        {contact.email && <span>{contact.email}</span>}
+      </div>
+      {analysis.companyProfile && (
+        <p>
+          <strong>Perfil:</strong> {analysis.companyProfile}
+        </p>
+      )}
+      <dl className="crm-facts compact">
+        {analysis.sector && (
+          <div>
+            <dt>Ramo</dt>
+            <dd>{analysis.sector}</dd>
+          </div>
+        )}
+        {analysis.website && (
+          <div>
+            <dt>Site</dt>
+            <dd>
+              <a href={analysis.website} target="_blank" rel="noreferrer">
+                {analysis.website}
+              </a>
+            </dd>
+          </div>
+        )}
+        {analysis.confidence && (
+          <div>
+            <dt>Confianca</dt>
+            <dd>{analysis.confidence}</dd>
+          </div>
+        )}
+      </dl>
+      {!!analysis.publicProducts?.length && (
+        <>
+          <h4>Produtos publicos</h4>
+          <ul className="crm-analysis-list">
+            {analysis.publicProducts.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!!analysis.purchasePreferences?.length && (
+        <>
+          <h4>Preferencias (historico)</h4>
+          <ul className="crm-analysis-list">
+            {analysis.purchasePreferences.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {analysis.approachStrategy && (
+        <>
+          <h4>Melhor abordagem</h4>
+          <p>{analysis.approachStrategy}</p>
+        </>
+      )}
+      {analysis.openingMessage && (
+        <>
+          <h4>Mensagem sugerida (WhatsApp)</h4>
+          <blockquote className="crm-analysis-message">{analysis.openingMessage}</blockquote>
+        </>
+      )}
+      {!!analysis.talkingPoints?.length && (
+        <>
+          <h4>Pontos de conversa</h4>
+          <ul className="crm-analysis-list">
+            {analysis.talkingPoints.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!!analysis.risksOrCautions?.length && (
+        <>
+          <h4>Cuidados</h4>
+          <ul className="crm-analysis-list">
+            {analysis.risksOrCautions.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!!analysis.sources?.length && (
+        <>
+          <h4>Fontes publicas</h4>
+          <ul className="crm-analysis-sources">
+            {analysis.sources.map((source) => (
+              <li key={source.url}>
+                <a href={source.url} target="_blank" rel="noreferrer">
+                  {source.title || source.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
 function LeadDetail({
   lead,
   sellerName,
@@ -148,6 +306,12 @@ function LeadDetail({
   onFinish,
   busy,
   actionError,
+  analysisData,
+  analysisLoading,
+  analysisError,
+  onAnalysisRetry,
+  onAnalysisRefresh,
+  analysisRefreshing,
 }: {
   lead: CrmLeadDetail;
   sellerName: string;
@@ -155,6 +319,12 @@ function LeadDetail({
   onFinish: (notes: string) => void;
   busy: boolean;
   actionError: string;
+  analysisData: CrmLeadAnalysisResponse | undefined;
+  analysisLoading: boolean;
+  analysisError: Error | null;
+  onAnalysisRetry: () => void;
+  onAnalysisRefresh: () => void;
+  analysisRefreshing: boolean;
 }) {
   const [notes, setNotes] = useState(lead.notes || "");
   const extras: [string, string][] = [
@@ -211,6 +381,14 @@ function LeadDetail({
           <strong>{relativeTime(lead.lastOrderAt)}</strong>
         </article>
       </div>
+      <LeadAnalysis
+        data={analysisData}
+        loading={analysisLoading}
+        error={analysisError}
+        onRetry={onAnalysisRetry}
+        onRefresh={onAnalysisRefresh}
+        refreshing={analysisRefreshing}
+      />
       <dl className="crm-facts">
         {extras.map(([label, value]) => (
           <div key={label}>
@@ -316,6 +494,17 @@ export function CrmLeadsPage() {
     queryKey: ["crm-lead", selectedId],
     queryFn: () => crmApi.lead(selectedId as string),
     enabled: Boolean(selectedId),
+  });
+  const [analysisRefreshToken, setAnalysisRefreshToken] = useState(0);
+  useEffect(() => {
+    setAnalysisRefreshToken(0);
+  }, [selectedId]);
+  const analysisQuery = useQuery({
+    queryKey: ["crm-lead-analysis", selectedId, analysisRefreshToken],
+    queryFn: () => crmApi.analyzeLead(selectedId as string, analysisRefreshToken > 0),
+    enabled: Boolean(selectedId),
+    staleTime: 1000 * 60 * 60,
+    retry: false,
   });
 
   const claimMutation = useMutation({
@@ -509,6 +698,12 @@ export function CrmLeadsPage() {
               actionError={actionError instanceof Error ? actionError.message : ""}
               onClaim={() => claimMutation.mutate()}
               onFinish={(notes) => finishMutation.mutate(notes)}
+              analysisData={analysisQuery.data}
+              analysisLoading={analysisQuery.isLoading}
+              analysisError={analysisQuery.error instanceof Error ? analysisQuery.error : null}
+              onAnalysisRetry={() => void analysisQuery.refetch()}
+              onAnalysisRefresh={() => setAnalysisRefreshToken((token) => token + 1)}
+              analysisRefreshing={analysisQuery.isFetching && analysisRefreshToken > 0}
             />
           )}
         </EntityDetailDrawer>
