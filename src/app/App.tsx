@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Link,
   Navigate,
   NavLink,
   Route,
@@ -11,8 +12,11 @@ import { api } from "../api";
 import { useAuth } from "../auth/AuthProvider";
 import { GlobalFilterBar } from "../components/filters/GlobalFilterBar";
 import { QueryState } from "../components/feedback/QueryState";
+import { CrmApp } from "../crm/CrmApp";
 import { useAnalyticsFilters } from "../hooks/useAnalyticsFilters";
 import { DataQualityPage } from "../pages/DataQualityPage";
+import { HomeGate } from "../pages/HomeGate";
+import { LoginPage } from "../pages/LoginPage";
 import { AppearanceSelect } from "../theme/AppearanceSelect";
 import { lazyPage } from "./lazyPage";
 
@@ -78,7 +82,18 @@ function QualityRoute() {
 
 export function App() {
   const location = useLocation();
-  const { user, loading } = useAuth();
+  if (location.pathname === "/" || location.pathname === "/home") {
+    return <HomeGate />;
+  }
+  if (location.pathname.startsWith("/crm")) {
+    return <CrmApp />;
+  }
+  return <BiApp />;
+}
+
+function BiApp() {
+  const location = useLocation();
+  const { user, loading, signOut } = useAuth();
   const syncStatus = useQuery({
     queryKey: ["sync-status"],
     queryFn: api.syncStatus,
@@ -104,7 +119,7 @@ export function App() {
         : filters.period.toUpperCase();
 
   if (loading) return <QueryState loading error={null} />;
-  if (!user) return <QueryState loading error={null} />;
+  if (!user) return <LoginPage />;
 
   if (location.pathname === "/legacy") {
     return (
@@ -154,6 +169,10 @@ export function App() {
             <span>
               {user.username} · {user.role}
             </span>
+            <Link to="/">Início</Link>
+            <button type="button" onClick={() => void signOut()}>
+              Sair
+            </button>
           </div>
         </header>
         {isAnalyticsRoute && (

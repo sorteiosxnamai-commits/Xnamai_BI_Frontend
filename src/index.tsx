@@ -8,6 +8,7 @@ import { AppearanceProvider } from "./theme/AppearanceProvider";
 import "./style.css";
 import "./app/app.css";
 import "./theme/appearance.css";
+import "./crm/crm.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {

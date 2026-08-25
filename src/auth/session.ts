@@ -11,11 +11,18 @@ let accessToken = "";
 let refreshPromise: Promise<AuthResult | null> | null = null;
 
 async function readAuthResponse(response: Response): Promise<AuthResult> {
+  const raw = await response.text();
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Falha de autenticação");
+    let message = raw || "Falha de autenticacao";
+    try {
+      const parsed = JSON.parse(raw) as { detail?: unknown };
+      if (typeof parsed.detail === "string" && parsed.detail) message = parsed.detail;
+    } catch {
+      /* keep raw body */
+    }
+    throw new Error(message);
   }
-  return response.json() as Promise<AuthResult>;
+  return JSON.parse(raw) as AuthResult;
 }
 
 function applySession(result: AuthResult) {

@@ -1,5 +1,6 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AuthUser } from "./session";
+import { login, logout, refreshSession } from "./session";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -9,15 +10,51 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const directAccess: AuthContextValue = {
-  user: { username: "acesso-direto", role: "admin" },
-  loading: false,
-  signIn: () => Promise.resolve(),
-  signOut: () => Promise.resolve(),
-};
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  return <AuthContext.Provider value={directAccess}>{children}</AuthContext.Provider>;
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const session = await refreshSession();
+        if (!cancelled) setUser(session?.user || null);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    const expired = () => setUser(null);
+    window.addEventListener("bi-auth-expired", expired);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("bi-auth-expired", expired);
+    };
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      loading,
+      signIn: async (username, password) => {
+        const session = await login(username, password);
+        setUser(session.user);
+      },
+      signOut: async () => {
+        try {
+          await logout();
+        } finally {
+          setUser(null);
+        }
+      },
+    }),
+    [user, loading],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

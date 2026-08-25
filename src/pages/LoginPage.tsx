@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { AppearanceSelect } from "../theme/AppearanceSelect";
 
@@ -27,11 +28,13 @@ export function LoginPage() {
       <form className="login-card" onSubmit={submit}>
         <small>XNAMAI BUSINESS INTELLIGENCE</small>
         <h1>Acesso ao BI</h1>
-        <p>Entre com sua conta administrativa ou de visualização.</p>
+        <p>Ambiente restrito. O CRM de vendas permanece aberto, sem senha, na tela inicial.</p>
         <label>
           Usuário
           <input
+            type="email"
             autoComplete="username"
+            placeholder="admin@xnamai.com"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             required
@@ -51,6 +54,9 @@ export function LoginPage() {
         <button type="submit" disabled={submitting}>
           {submitting ? "Entrando…" : "Entrar"}
         </button>
+        <Link className="login-back" to="/">
+          Voltar ao início
+        </Link>
         <AppearanceSelect />
       </form>
     </main>
