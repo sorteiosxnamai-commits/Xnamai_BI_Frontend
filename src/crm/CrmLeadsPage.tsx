@@ -471,6 +471,8 @@ export function CrmLeadsPage() {
   const [view, setView] = useState<"main" | "new" | "ai">("main");
   const [queuePage, setQueuePage] = useState(1);
   const [queueItems, setQueueItems] = useState<CrmLead[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [sellerName, setSellerName] = useState(readSeller);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [refreshAi, setRefreshAi] = useState(false);
@@ -478,18 +480,19 @@ export function CrmLeadsPage() {
   useEffect(() => {
     setQueuePage(1);
     setQueueItems([]);
+    setHasMore(false);
     setRefreshAi(false);
   }, [search, view]);
 
   const leadsQuery = useQuery({
-    queryKey: ["crm-leads", search, view, queuePage, refreshAi],
+    queryKey: ["crm-leads", search, view, refreshAi],
     queryFn: () =>
       crmApi.leads({
         search,
         top: 20,
         view,
-        queuePage,
-        refreshAi: view === "ai" && queuePage === 1 && refreshAi,
+        queuePage: 1,
+        refreshAi: view === "ai" && refreshAi,
       }),
     retry: false,
   });
@@ -499,21 +502,37 @@ export function CrmLeadsPage() {
     setRefreshAi(false);
   }, [refreshAi, leadsQuery.isFetching, leadsQuery.data]);
 
-  const data = leadsQuery.data;
+  const pageData = leadsQuery.data;
 
   useEffect(() => {
-    if (!data) return;
-    const responsePage = data.queuePage ?? 1;
-    if (responsePage <= 1) {
-      setQueueItems(data.queue);
-      return;
+    if (!pageData) return;
+    setQueueItems(pageData.queue);
+    setQueuePage(1);
+    setHasMore(pageData.hasMore ?? false);
+  }, [pageData]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = queuePage + 1;
+      const next = await crmApi.leads({
+        search,
+        top: 20,
+        view,
+        queuePage: nextPage,
+      });
+      setQueueItems((current) => {
+        const known = new Set(current.map((lead) => lead.id));
+        const extra = next.queue.filter((lead) => !known.has(lead.id));
+        return extra.length ? [...current, ...extra] : current;
+      });
+      setQueuePage(nextPage);
+      setHasMore(next.hasMore ?? false);
+    } finally {
+      setLoadingMore(false);
     }
-    setQueueItems((current) => {
-      const known = new Set(current.map((lead) => lead.id));
-      const extra = data.queue.filter((lead) => !known.has(lead.id));
-      return extra.length ? [...current, ...extra] : current;
-    });
-  }, [data]);
+  };
 
   const detailQuery = useQuery({
     queryKey: ["crm-lead", selectedId],
@@ -538,6 +557,7 @@ export function CrmLeadsPage() {
       queryClient.setQueryData(["crm-lead", selectedId], detail);
       setQueuePage(1);
       setQueueItems([]);
+      setHasMore(false);
       void queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
     },
   });
@@ -547,6 +567,7 @@ export function CrmLeadsPage() {
       setSelectedId(null);
       setQueuePage(1);
       setQueueItems([]);
+      setHasMore(false);
       void queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
       void queryClient.invalidateQueries({ queryKey: ["crm-dashboard"] });
     },
@@ -554,12 +575,11 @@ export function CrmLeadsPage() {
 
   const busy = claimMutation.isPending || finishMutation.isPending;
   const actionError = claimMutation.error || finishMutation.error;
-  const loadingMore = leadsQuery.isFetching && queuePage > 1;
 
   const preview = useMemo(() => {
-    if (!data || !selectedId) return null;
-    return [...data.top, ...queueItems].find((lead) => lead.id === selectedId) || null;
-  }, [data, queueItems, selectedId]);
+    if (!pageData || !selectedId) return null;
+    return [...pageData.top, ...queueItems].find((lead) => lead.id === selectedId) || null;
+  }, [pageData, queueItems, selectedId]);
 
   return (
     <div className="page-stack crm-leads">
@@ -584,15 +604,15 @@ export function CrmLeadsPage() {
           />
         </label>
         <p>
-          {data
+          {pageData
             ? view === "new"
-              ? `${num(data.count)} sem compra | ${num(data.open)} livres | ${num(data.inProgress)} em atendimento`
+              ? `${num(pageData.count)} sem compra | ${num(pageData.open)} livres | ${num(pageData.inProgress)} em atendimento`
               : view === "ai"
-                ? `${num(data.count)} compradores | ${num(data.aiScored ?? 0)} priorizados pela IA${
-                    data.aiPending ? ` | ${num(data.aiPending)} aguardando analise` : ""
-                  } | ${num(data.open)} livres`
-                : `${num(data.count)} na fila | ${num(data.open)} livres | ${num(data.inProgress)} em atendimento${
-                    data.newCount ? ` | ${num(data.newCount)} nunca compraram` : ""
+                ? `${num(pageData.count)} compradores | ${num(pageData.aiScored ?? 0)} priorizados pela IA${
+                    pageData.aiPending ? ` | ${num(pageData.aiPending)} aguardando analise` : ""
+                  } | ${num(pageData.open)} livres`
+                : `${num(pageData.count)} na fila | ${num(pageData.open)} livres | ${num(pageData.inProgress)} em atendimento${
+                    pageData.newCount ? ` | ${num(pageData.newCount)} nunca compraram` : ""
                   }`
             : leadsQuery.isError
               ? "Nao foi possivel carregar a fila"
@@ -616,7 +636,7 @@ export function CrmLeadsPage() {
             onClick={() => setView("new")}
           >
             Leads novos
-            {data?.newCount != null ? ` (${num(data.newCount)})` : ""}
+            {pageData?.newCount != null ? ` (${num(pageData.newCount)})` : ""}
           </button>
           <button
             type="button"
@@ -636,17 +656,17 @@ export function CrmLeadsPage() {
         onRetry={() => void leadsQuery.refetch()}
       />
 
-      {data && view === "main" && (
+      {pageData && view === "main" && (
         <>
           <section>
             <div className="module-heading">
               <div>
                 <h2>Top 20</h2>
-                <p>Alto faturamento e mais tempo sem comprar  —  maior potencial de recuperacao.</p>
+                <p>Alto faturamento e mais tempo sem comprar - maior potencial de recuperacao.</p>
               </div>
             </div>
             <div className="crm-lead-grid">
-              {data.top.map((lead, index) => (
+              {pageData.top.map((lead, index) => (
                 <LeadCard
                   key={lead.id}
                   lead={lead}
@@ -654,7 +674,7 @@ export function CrmLeadsPage() {
                   onOpen={() => setSelectedId(lead.id)}
                 />
               ))}
-              {!data.top.length && <p className="crm-empty">Nenhum lead no Top 20.</p>}
+              {!pageData.top.length && <p className="crm-empty">Nenhum lead no Top 20.</p>}
             </div>
           </section>
           <section>
@@ -663,8 +683,8 @@ export function CrmLeadsPage() {
                 <h2>Fila</h2>
                 <p>
                   Demais clientes fora do Top 20. Quem finalizar o atendimento sai da lista.
-                  {data.queueTotal
-                    ? ` Mostrando ${num(queueItems.length)} de ${num(data.queueTotal)}.`
+                  {pageData.queueTotal
+                    ? ` Mostrando ${num(queueItems.length)} de ${num(pageData.queueTotal)}.`
                     : ""}
                 </p>
               </div>
@@ -675,13 +695,13 @@ export function CrmLeadsPage() {
               ))}
               {!queueItems.length && <p className="crm-empty">Fila vazia alem do Top 20.</p>}
             </div>
-            {data.hasMore && (
+            {hasMore && (
               <div className="crm-load-more">
                 <button
                   type="button"
                   className="row-action"
                   disabled={loadingMore}
-                  onClick={() => setQueuePage((page) => page + 1)}
+                  onClick={() => void loadMore()}
                 >
                   {loadingMore ? "Carregando..." : "Carregar mais"}
                 </button>
@@ -691,7 +711,7 @@ export function CrmLeadsPage() {
         </>
       )}
 
-      {data && view === "new" && (
+      {pageData && view === "new" && (
         <section>
           <div className="module-heading">
             <div>
@@ -705,13 +725,13 @@ export function CrmLeadsPage() {
             ))}
             {!queueItems.length && <p className="crm-empty">Nenhum lead sem compra encontrado.</p>}
           </div>
-          {data.hasMore && (
+          {hasMore && (
             <div className="crm-load-more">
               <button
                 type="button"
                 className="row-action"
                 disabled={loadingMore}
-                onClick={() => setQueuePage((page) => page + 1)}
+                onClick={() => void loadMore()}
               >
                 {loadingMore ? "Carregando..." : "Carregar mais"}
               </button>
@@ -720,7 +740,7 @@ export function CrmLeadsPage() {
         </section>
       )}
 
-      {data && view === "ai" && (
+      {pageData && view === "ai" && (
         <section>
           <div className="module-heading">
             <div>
@@ -728,8 +748,8 @@ export function CrmLeadsPage() {
               <p>
                 Clientes com historico de compra priorizados pela IA (faturamento, recencia, frequencia,
                 segmento e mix de produtos). Maior pontuacao = maior chance de recompra agora.
-                {data.aiPending
-                  ? ` Analisando em lotes de 40  —  ${num(data.aiPending)} ainda na fila de analise.`
+                {pageData.aiPending
+                  ? ` Analisando em lotes de 40 - ${num(pageData.aiPending)} ainda na fila de analise.`
                   : ""}
               </p>
             </div>
@@ -740,6 +760,7 @@ export function CrmLeadsPage() {
               onClick={() => {
                 setQueuePage(1);
                 setQueueItems([]);
+                setHasMore(false);
                 setRefreshAi(true);
                 void queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
               }}
@@ -752,7 +773,7 @@ export function CrmLeadsPage() {
               <LeadCard
                 key={lead.id}
                 lead={lead}
-                rank={index + 1 + (queuePage - 1) * (data.queuePageSize || 40)}
+                rank={index + 1}
                 showAi
                 onOpen={() => setSelectedId(lead.id)}
               />
@@ -765,13 +786,13 @@ export function CrmLeadsPage() {
               </p>
             )}
           </div>
-          {data.hasMore && (
+          {hasMore && (
             <div className="crm-load-more">
               <button
                 type="button"
                 className="row-action"
                 disabled={loadingMore}
-                onClick={() => setQueuePage((page) => page + 1)}
+                onClick={() => void loadMore()}
               >
                 {loadingMore ? "Carregando..." : "Carregar mais"}
               </button>
