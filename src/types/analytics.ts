@@ -74,8 +74,72 @@ export type TimeseriesResponse = {
 export type BreakdownsResponse = {
   statuses: { status: string; orders: number; value: number }[];
   orderValueBands: { band: string; orders: number; value: number }[];
-  productAbc: { class: "A" | "B" | "C"; entities: number; revenue: number }[];
-  customerAbc: { class: "A" | "B" | "C"; entities: number; revenue: number }[];
+  productAbc: {
+    class: "A" | "B" | "C";
+    entities: number;
+    revenue: number;
+    revenueSharePct?: number;
+    entitySharePct?: number;
+  }[];
+  customerAbc: {
+    class: "A" | "B" | "C";
+    entities: number;
+    revenue: number;
+    revenueSharePct?: number;
+    entitySharePct?: number;
+  }[];
+  appliedFilters: AppliedFilters;
+  metadata: AnalyticsMetadata;
+};
+
+export type ProductInsightsResponse = {
+  summary: {
+    productsWithSales: number;
+    totalRevenue: number;
+    totalQuantity: number;
+    productsFor80Pct: number;
+    productsFor95Pct: number;
+    top10RevenueSharePct: number;
+    top20RevenueSharePct: number;
+    averageRevenuePerSku: number;
+  };
+  productAbc: {
+    class: "A" | "B" | "C";
+    entities: number;
+    revenue: number;
+    revenueSharePct: number;
+    entitySharePct: number;
+  }[];
+  pareto: {
+    rank: number;
+    id: string;
+    code: string | null;
+    name: string;
+    revenue: number;
+    quantitySold: number;
+    revenueSharePct: number;
+    cumulativeSharePct: number;
+    abcClass: "A" | "B" | "C";
+  }[];
+  topByQuantity: {
+    rank: number;
+    id: string;
+    name: string;
+    quantitySold: number;
+    revenue: number;
+    quantitySharePct: number;
+  }[];
+  classificationMix: {
+    classification: string;
+    products: number;
+    sharePct: number;
+  }[];
+  quantityVsRevenue: {
+    name: string;
+    quantitySold: number;
+    revenue: number;
+    abcClass: "A" | "B" | "C";
+  }[];
   appliedFilters: AppliedFilters;
   metadata: AnalyticsMetadata;
 };

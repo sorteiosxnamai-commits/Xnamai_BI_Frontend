@@ -15,6 +15,7 @@ import type {
   PageResponse,
   ProductAnalyticsRow,
   ProductDetailResponse,
+  ProductInsightsResponse,
   RankingsResponse,
   SellerAnalyticsRow,
   SellerDetailResponse,
@@ -71,6 +72,8 @@ const abcItemSchema = z.object({
   class: z.enum(["A", "B", "C"]),
   entities: z.number(),
   revenue: z.coerce.number(),
+  revenueSharePct: z.coerce.number().optional(),
+  entitySharePct: z.coerce.number().optional(),
 });
 const breakdownsSchema = z.object({
   statuses: z.array(
@@ -89,6 +92,65 @@ const breakdownsSchema = z.object({
   ),
   productAbc: z.array(abcItemSchema),
   customerAbc: z.array(abcItemSchema),
+  appliedFilters: z.record(z.string(), z.unknown()),
+  metadata: metadataSchema,
+});
+
+const productInsightsSchema = z.object({
+  summary: z.object({
+    productsWithSales: z.number(),
+    totalRevenue: z.coerce.number(),
+    totalQuantity: z.coerce.number(),
+    productsFor80Pct: z.number(),
+    productsFor95Pct: z.number(),
+    top10RevenueSharePct: z.coerce.number(),
+    top20RevenueSharePct: z.coerce.number(),
+    averageRevenuePerSku: z.coerce.number(),
+  }),
+  productAbc: z.array(
+    abcItemSchema.extend({
+      revenueSharePct: z.coerce.number(),
+      entitySharePct: z.coerce.number(),
+    })
+  ),
+  pareto: z.array(
+    z.object({
+      rank: z.number(),
+      id: z.string(),
+      code: z.string().nullable(),
+      name: z.string(),
+      revenue: z.coerce.number(),
+      quantitySold: z.coerce.number(),
+      revenueSharePct: z.coerce.number(),
+      cumulativeSharePct: z.coerce.number(),
+      abcClass: z.enum(["A", "B", "C"]),
+    })
+  ),
+  topByQuantity: z.array(
+    z.object({
+      rank: z.number(),
+      id: z.string(),
+      name: z.string(),
+      quantitySold: z.coerce.number(),
+      revenue: z.coerce.number(),
+      quantitySharePct: z.coerce.number(),
+    })
+  ),
+  classificationMix: z.array(
+    z.object({
+      classification: z.string(),
+      products: z.number(),
+      sharePct: z.coerce.number(),
+    })
+  ),
+  quantityVsRevenue: z.array(
+    z.object({
+      name: z.string(),
+      quantitySold: z.coerce.number(),
+      revenue: z.coerce.number(),
+      abcClass: z.enum(["A", "B", "C"]),
+    })
+  ),
   appliedFilters: z.record(z.string(), z.unknown()),
   metadata: metadataSchema,
 });
@@ -334,6 +396,12 @@ export const analyticsApi = {
       `/api/v1/analytics/breakdowns?${paramsFromFilters(filters)}`,
       breakdownsSchema
     ) as Promise<BreakdownsResponse>;
+  },
+  productInsights(filters: AnalyticsFilters): Promise<ProductInsightsResponse> {
+    return request(
+      `/api/v1/analytics/product-insights?${paramsFromFilters(filters)}`,
+      productInsightsSchema
+    ) as Promise<ProductInsightsResponse>;
   },
   rankings(filters: AnalyticsFilters): Promise<RankingsResponse> {
     const schema = z.object({

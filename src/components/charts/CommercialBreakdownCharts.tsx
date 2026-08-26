@@ -104,11 +104,22 @@ export function CommercialBreakdownCharts({
           <ResponsiveContainer width="100%" height={310}>
             <PieChart>
               <Pie
-                data={data.productAbc}
-                dataKey="revenue"
-                nameKey="class"
+                data={data.productAbc.map((item) => ({
+                  ...item,
+                  label: `Classe ${item.class}`,
+                  share:
+                    item.revenueSharePct ??
+                    (data.productAbc.reduce((sum, row) => sum + row.revenue, 0) > 0
+                      ? (item.revenue /
+                          data.productAbc.reduce((sum, row) => sum + row.revenue, 0)) *
+                        100
+                      : 0),
+                }))}
+                dataKey="share"
+                nameKey="label"
                 innerRadius={65}
                 outerRadius={105}
+                label={({ name, value }) => `${name}: ${Number(value).toFixed(1)}%`}
                 onClick={(entry) => {
                   const abcClass = (entry.payload as { class?: string } | undefined)?.class;
                   navigate({
@@ -124,7 +135,17 @@ export function CommercialBreakdownCharts({
               </Pie>
               <Tooltip
                 contentStyle={colors.tooltip}
-                formatter={(value) => money.format(Number(value))}
+                formatter={(value, _name, item) => {
+                  const payload = item?.payload as {
+                    revenue?: number;
+                    entities?: number;
+                    entitySharePct?: number;
+                  };
+                  return [
+                    `${Number(value).toFixed(1)}% | ${money.format(Number(payload?.revenue || 0))} | ${Number(payload?.entities || 0)} SKUs`,
+                    "Participacao",
+                  ];
+                }}
               />
               <Legend />
             </PieChart>
