@@ -63,7 +63,7 @@ function ChannelTable({ channels }: { channels?: RetailChannel[] }) {
                 <td>
                   {listings.length > 0 ? (
                     <ul className="retail-sellers">
-                      {listings.slice(0, 4).map((item) => (
+                      {listings.slice(0, 6).map((item) => (
                         <li key={`${item.seller}-${item.price}-${item.url || ""}`}>
                           {item.url ? (
                             <a href={item.url} target="_blank" rel="noreferrer">
@@ -75,8 +75,13 @@ function ChannelTable({ channels }: { channels?: RetailChannel[] }) {
                           <em>{money(item.price)}</em>
                         </li>
                       ))}
-                      {listings.length > 4 && (
-                        <li className="retail-muted">+{listings.length - 4} outros</li>
+                      {(row.sellersCompared || listings.length) > 1 && (
+                        <li className="retail-muted">
+                          {row.sellersCompared || listings.length} vendedores comparados
+                        </li>
+                      )}
+                      {listings.length > 6 && (
+                        <li className="retail-muted">+{listings.length - 6} outros</li>
                       )}
                     </ul>
                   ) : (
@@ -182,8 +187,8 @@ function ProductDetail({
       <section className="retail-block">
         <h4>Precos por plataforma (mesmo produto)</h4>
         <p className="retail-muted">
-          Busca em paralelo com varios vendedores por canal. Custo de compra = preco de tabela Mercos.
-          O preco usado na margem e a mediana dos anuncios validos (evita outlier).
+          Busca em paralelo em todas as plataformas, com varias queries e 2a passagem quando
+          houver poucos vendedores. Margem usa a mediana dos anuncios validos.
         </p>
         <ChannelTable channels={product.channels} />
       </section>
