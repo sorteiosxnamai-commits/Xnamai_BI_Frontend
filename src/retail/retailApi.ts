@@ -37,6 +37,15 @@ export type RetailProduct = {
   melhorEnvio?: string;
   melhorEnvioLabel?: string;
   porquePlataforma?: string | null;
+  porqueCanalDetalhe?: string | null;
+  comparativoCanais?: {
+    plataforma?: string;
+    label?: string;
+    pros?: string[];
+    contras?: string[];
+    veredito?: string;
+  }[];
+  packUnits?: number;
   margemLiquida?: number | null;
   margemLiquidaPct?: number | null;
   custoEstimado?: number;
@@ -73,6 +82,7 @@ export type RetailJob = {
   status: string;
   mode: string;
   batchSize: number;
+  concurrency?: number;
   total: number;
   cursor: number;
   processed: number;

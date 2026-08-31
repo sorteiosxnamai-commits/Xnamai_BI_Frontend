@@ -35,10 +35,17 @@
   font-size: 13px;
   width: 100%;
 }
-.retail-job-actions {
-  display: flex;
-  flex-wrap: wrap;
+.retail-channel-why {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.45;
+  display: grid;
   gap: 8px;
+}
+.retail-channel-why span {
+  display: block;
+  color: var(--muted, #747d90);
 }
 .retail-progress strong {
   font-size: 20px;

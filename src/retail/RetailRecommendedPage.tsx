@@ -133,9 +133,25 @@ function ProductDetail({
           <strong>{product.melhorPlataformaLabel}</strong>
           {product.porquePlataforma ? ` - ${product.porquePlataforma}` : ""}
         </p>
+        {product.porqueCanalDetalhe && (
+          <p className="retail-why">{product.porqueCanalDetalhe}</p>
+        )}
         <p className="retail-muted">
           Envio: {product.melhorEnvioLabel || product.melhorEnvio || "-"}
+          {product.packUnits ? ` ÿ SKU com ${product.packUnits} unidade(s)` : ""}
         </p>
+        {!!product.comparativoCanais?.length && (
+          <ul className="retail-channel-why">
+            {product.comparativoCanais.map((row) => (
+              <li key={String(row.plataforma || row.label)}>
+                <strong>{String(row.label || row.plataforma)}</strong>
+                {row.veredito ? ` (${row.veredito})` : ""}
+                {!!row.pros?.length && <span> Pros: {row.pros.join("; ")}</span>}
+                {!!row.contras?.length && <span> Contras: {row.contras.join("; ")}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="retail-block">
@@ -301,8 +317,8 @@ export function RetailRecommendedPage() {
                 Job #{job.id}: {job.status} - {job.cursor}/{job.total} ({job.progressPct}%)
               </strong>
               <span>
-                ok {job.processed} ÿ falhas {job.failed}
-                {job.currentProductId ? ` ÿ atual ${job.currentProductId}` : ""}
+                ok {job.processed} ? falhas {job.failed}
+                {job.currentProductId ? ` ? atual ${job.currentProductId}` : ""}
               </span>
               {job.lastError && <em className="retail-error">{job.lastError}</em>}
             </div>
@@ -321,9 +337,11 @@ export function RetailRecommendedPage() {
               type="button"
               className="row-action"
               disabled={jobRunning || startJob.isPending || catalogPending === 0}
-              onClick={() => startJob.mutate({ mode: "all", batchSize: 10 })}
+              onClick={() => startJob.mutate({ mode: "all", batchSize: 5 })}
             >
-              {jobRunning && job?.mode === "all" ? "Catalogo em andamento..." : "Analisar catalogo (retomavel)"}
+              {jobRunning && job?.mode === "all"
+                ? `Catalogo em paralelo (${job.concurrency || 5} workers)...`
+                : "Analisar catalogo em paralelo"}
             </button>
             {job?.resumable && (
               <button
