@@ -1,5 +1,15 @@
 const API_URL = (import.meta.env.VITE_BI_API_URL || "").replace(/\/$/, "");
 
+export type RetailListing = {
+  price?: number | null;
+  seller?: string | null;
+  url?: string | null;
+  source?: string | null;
+  freight?: number | null;
+  units?: number | null;
+  title?: string | null;
+};
+
 export type RetailChannel = {
   platform: string;
   label: string;
@@ -9,12 +19,14 @@ export type RetailChannel = {
   retailPrice: number | null;
   cost: number;
   fee: number | null;
-  freight: number;
+  freight: number | null;
   packaging: number;
   netMargin: number | null;
   marginPct: number | null;
   hasPrice?: boolean;
   seller?: string | null;
+  sellersCompared?: number;
+  listings?: RetailListing[];
   source?: string | null;
   url?: string | null;
 };

@@ -37,39 +37,64 @@ function ChannelTable({ channels }: { channels?: RetailChannel[] }) {
           <tr>
             <th>Canal</th>
             <th>Preco anunciado</th>
-            <th>Vendedor</th>
+            <th>Vendedores</th>
             <th>Taxa</th>
             <th>Frete</th>
             <th>Margem</th>
           </tr>
         </thead>
         <tbody>
-          {channels.map((row) => (
-            <tr key={row.platform}>
-              <td>{row.label}</td>
-              <td>
-                {row.hasPrice === false || row.retailPrice == null ? (
-                  <span className="retail-muted">Sem anuncio encontrado</span>
-                ) : row.url ? (
-                  <a href={row.url} target="_blank" rel="noreferrer">
-                    {money(row.retailPrice)}
-                  </a>
-                ) : (
-                  money(row.retailPrice)
-                )}
-              </td>
-              <td>{row.seller || row.source || "-"}</td>
-              <td>
-                {row.fee == null ? "-" : `${pct(row.feePct)} (${money(row.fee)})`}
-              </td>
-              <td>{money(row.freight)}</td>
-              <td>
-                {row.marginPct == null || row.netMargin == null
-                  ? "-"
-                  : `${pct(row.marginPct)} / ${money(row.netMargin)}`}
-              </td>
-            </tr>
-          ))}
+          {channels.map((row) => {
+            const listings = (row.listings || []).filter((item) => item.price != null);
+            return (
+              <tr key={row.platform}>
+                <td>{row.label}</td>
+                <td>
+                  {row.hasPrice === false || row.retailPrice == null ? (
+                    <span className="retail-muted">Sem anuncio encontrado</span>
+                  ) : row.url ? (
+                    <a href={row.url} target="_blank" rel="noreferrer">
+                      {money(row.retailPrice)}
+                    </a>
+                  ) : (
+                    money(row.retailPrice)
+                  )}
+                </td>
+                <td>
+                  {listings.length > 0 ? (
+                    <ul className="retail-sellers">
+                      {listings.slice(0, 4).map((item) => (
+                        <li key={`${item.seller}-${item.price}-${item.url || ""}`}>
+                          {item.url ? (
+                            <a href={item.url} target="_blank" rel="noreferrer">
+                              {item.seller || "Vendedor"}
+                            </a>
+                          ) : (
+                            <span>{item.seller || "Vendedor"}</span>
+                          )}
+                          <em>{money(item.price)}</em>
+                        </li>
+                      ))}
+                      {listings.length > 4 && (
+                        <li className="retail-muted">+{listings.length - 4} outros</li>
+                      )}
+                    </ul>
+                  ) : (
+                    row.seller || row.source || "-"
+                  )}
+                </td>
+                <td>
+                  {row.fee == null ? "-" : `${pct(row.feePct)} (${money(row.fee)})`}
+                </td>
+                <td>{row.freight == null ? "-" : money(row.freight)}</td>
+                <td>
+                  {row.marginPct == null || row.netMargin == null
+                    ? "-"
+                    : `${pct(row.marginPct)} / ${money(row.netMargin)}`}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -157,7 +182,8 @@ function ProductDetail({
       <section className="retail-block">
         <h4>Precos por plataforma (mesmo produto)</h4>
         <p className="retail-muted">
-          Preco anunciado por vendedores em cada canal. Custo de compra = preco de tabela Mercos.
+          Busca em paralelo com varios vendedores por canal. Custo de compra = preco de tabela Mercos.
+          O preco usado na margem e a mediana dos anuncios validos (evita outlier).
         </p>
         <ChannelTable channels={product.channels} />
       </section>

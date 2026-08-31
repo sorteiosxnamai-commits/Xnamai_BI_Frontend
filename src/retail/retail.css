@@ -79,6 +79,24 @@
   border-radius: 999px;
   white-space: nowrap;
 }
+.retail-sellers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.retail-sellers li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.retail-sellers em {
+  font-style: normal;
+  color: var(--muted, #747d90);
+  white-space: nowrap;
+}
 .retail-channel-why {
   margin: 10px 0 0;
   padding-left: 18px;
