@@ -166,7 +166,7 @@ export function ProductInsightsCharts({
               <li key={item.class}>
                 <strong>Classe {item.class}</strong>
                 <span>
-                  {pct(item.revenueSharePct)} do faturamento · {pct(item.entitySharePct)} dos SKUs (
+                  {pct(item.revenueSharePct)} do faturamento Â· {pct(item.entitySharePct)} dos SKUs (
                   {number.format(item.entities)})
                 </span>
               </li>

@@ -341,7 +341,10 @@ export function RetailRecommendedPage() {
       {selectedId && (
         <EntityDetailDrawer
           title={selected?.name || "Produto"}
+          loading={detail.isLoading && !selected}
+          error={detail.error instanceof Error ? detail.error : null}
           onClose={() => setSelectedId(null)}
+          onRetry={() => void detail.refetch()}
         >
           <ProductDetail
             product={detail.data || selected}
