@@ -19,7 +19,7 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-test("portal inicial separa CRM aberto e BI restrito", () => {
+test("portal inicial separa CRM, varejo aberto e BI restrito", () => {
   render(
     <AppearanceProvider>
       <MemoryRouter>
@@ -28,5 +28,9 @@ test("portal inicial separa CRM aberto e BI restrito", () => {
     </AppearanceProvider>,
   );
   expect(screen.getByRole("link", { name: "Abrir CRM" })).toHaveAttribute("href", "/crm");
+  expect(screen.getByRole("link", { name: "Abrir Analise Varejo" })).toHaveAttribute(
+    "href",
+    "/analise-varejo",
+  );
   expect(screen.getByRole("link", { name: "Entrar no BI" })).toHaveAttribute("href", "/overview");
 });

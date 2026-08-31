@@ -19,7 +19,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const path = window.location.pathname;
     const publicRoute =
-      path === "/" || path === "/home" || path.startsWith("/crm");
+      path === "/" ||
+      path === "/home" ||
+      path.startsWith("/crm") ||
+      path.startsWith("/analise-varejo");
     if (publicRoute) {
       setLoading(false);
       return;

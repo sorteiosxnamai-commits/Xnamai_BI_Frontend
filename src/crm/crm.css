@@ -26,9 +26,15 @@
 }
 .home-gate-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(240px, 360px));
+  grid-template-columns: repeat(3, minmax(220px, 300px));
   gap: 16px;
-  width: min(760px, 100%);
+  width: min(980px, 100%);
+}
+@media (max-width: 900px) {
+  .home-gate-grid {
+    grid-template-columns: 1fr;
+    width: min(420px, 100%);
+  }
 }
 .home-gate-grid article {
   background: #fff;
@@ -60,6 +66,9 @@
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 13px;
+}
+.home-gate-grid article:nth-child(2) a {
+  background: #2f6fed;
 }
 .home-gate-grid article:last-child a {
   background: #5c5ee0;

@@ -9,6 +9,7 @@ import "./style.css";
 import "./app/app.css";
 import "./theme/appearance.css";
 import "./crm/crm.css";
+import "./retail/retail.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -1,0 +1,245 @@
+.retail-app > .app-sidebar {
+  background: #1a2433;
+}
+.retail-app .app-sidebar nav a:hover,
+.retail-app .app-sidebar nav a.active {
+  background: #243247;
+}
+.retail-hero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  align-items: center;
+}
+.retail-hero h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+.retail-hero p {
+  margin: 0;
+  color: var(--muted, #747d90);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.retail-progress {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.retail-progress strong {
+  font-size: 20px;
+}
+.retail-progress span,
+.retail-muted {
+  color: var(--muted, #747d90);
+  font-size: 13px;
+}
+.retail-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.retail-kpi-grid article small {
+  display: block;
+  color: var(--muted, #747d90);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.retail-kpi-grid article strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+}
+.retail-platform-card ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.retail-platform-card li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.retail-disclaimer {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--muted, #747d90);
+}
+.retail-list {
+  display: grid;
+  gap: 10px;
+}
+.retail-card {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  background: transparent;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  color: inherit;
+}
+.retail-card:hover {
+  border-color: color-mix(in srgb, #2f6fed 45%, transparent);
+  background: color-mix(in srgb, #2f6fed 6%, transparent);
+}
+.retail-card-rank {
+  font-size: 18px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.retail-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+.retail-card-head strong {
+  font-size: 15px;
+}
+.retail-card-head em {
+  font-style: normal;
+  font-weight: 700;
+  color: #2f6fed;
+}
+.retail-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--muted, #747d90);
+}
+.retail-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e8eef8;
+  color: #1a2433;
+}
+.retail-badge.ml {
+  background: #fff3bf;
+  color: #7a5b00;
+}
+.retail-badge.shopee {
+  background: #ffe8de;
+  color: #a33b12;
+}
+.retail-badge.tiktok {
+  background: #ececec;
+  color: #111;
+}
+.retail-badge.nuvem {
+  background: #e4f7ef;
+  color: #0f6a45;
+}
+.retail-badge.site {
+  background: #e8eef8;
+  color: #2f6fed;
+}
+.retail-appeal.alto {
+  color: #0f6a45;
+}
+.retail-appeal.baixo {
+  color: #a33b12;
+}
+.retail-pending {
+  color: #7a5b00;
+}
+.retail-why {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.retail-empty,
+.retail-error,
+.retail-ok {
+  font-size: 13px;
+}
+.retail-error {
+  color: #a33b12;
+}
+.retail-ok {
+  color: #0f6a45;
+}
+.retail-detail {
+  display: grid;
+  gap: 16px;
+}
+.retail-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+.retail-detail-head h3 {
+  margin: 8px 0 4px;
+}
+.retail-detail-head p {
+  margin: 0;
+  color: var(--muted, #747d90);
+  font-size: 13px;
+}
+.retail-block h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.retail-reasons,
+.retail-sources {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.retail-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 0;
+}
+.retail-facts div {
+  display: grid;
+  gap: 2px;
+}
+.retail-facts dt {
+  font-size: 11px;
+  color: var(--muted, #747d90);
+}
+.retail-facts dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.retail-table-wrap {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+.retail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.retail-table th,
+.retail-table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+@media (max-width: 960px) {
+  .retail-hero,
+  .retail-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
