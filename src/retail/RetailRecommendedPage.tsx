@@ -266,8 +266,8 @@ export function RetailRecommendedPage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
-  const [autoResumeTried, setAutoResumeTried] = useState(false);
   const [lastCompletedBatchId, setLastCompletedBatchId] = useState<number | null>(null);
+  const [lastAutoKickAt, setLastAutoKickAt] = useState(0);
 
   const jobStatus = useQuery({
     queryKey: ["retail-job"],
@@ -275,6 +275,7 @@ export function RetailRecommendedPage() {
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.hasActiveJob || data?.chainingNextBatch) return 2000;
+      if (data?.job?.resumable) return 3000;
       return 12_000;
     },
   });
@@ -364,12 +365,34 @@ export function RetailRecommendedPage() {
     }
   }, [job?.status, job?.processed, job?.cursor, job?.done, job, queryClient]);
 
+  // Auto-resume / auto-chain without requiring "Retomar job" clicks.
   useEffect(() => {
-    if (autoResumeTried || jobRunning || chaining || !job?.resumable || !job.id) return;
-    setAutoResumeTried(true);
-    resumeJob.mutate(job.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoResumeTried, job?.id, job?.resumable, jobRunning, chaining]);
+    if (jobRunning || resumeJob.isPending || startJob.isPending) return;
+    const now = Date.now();
+    if (now - lastAutoKickAt < 8_000) return;
+
+    if (job?.resumable && job.id && catalogPending > 0) {
+      setLastAutoKickAt(now);
+      resumeJob.mutate(job.id);
+      return;
+    }
+
+    if (chaining && catalogPending > 0 && job?.mode === "all") {
+      setLastAutoKickAt(now);
+      startJob.mutate({ mode: "all", batchSize: job.batchSize || 5 });
+    }
+  }, [
+    jobRunning,
+    chaining,
+    job?.resumable,
+    job?.id,
+    job?.mode,
+    job?.batchSize,
+    catalogPending,
+    lastAutoKickAt,
+    resumeJob,
+    startJob,
+  ]);
 
   const data = recommended.data;
   const items = data?.items || [];
@@ -548,8 +571,8 @@ export function RetailRecommendedPage() {
             </em>
           )}
           <em className="retail-muted">
-            Cada produto e salvo ao concluir. Ao terminar um lote, o sistema prepara o proximo
-            automaticamente ate o catalogo acabar.
+            Cada produto e salvo ao concluir. Lotes interrompidos retomam sozinhos; ao terminar um
+            lote, o proximo inicia automaticamente ate o catalogo acabar.
           </em>
         </div>
       </section>
