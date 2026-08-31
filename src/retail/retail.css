@@ -26,6 +26,20 @@
   gap: 8px;
   justify-items: start;
 }
+.retail-job-box {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #2f6fed 10%, transparent);
+  font-size: 13px;
+  width: 100%;
+}
+.retail-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .retail-progress strong {
   font-size: 20px;
 }

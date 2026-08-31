@@ -40,14 +40,10 @@ vi.mock("./retailApi", () => ({
       disclaimer: "Precos via busca publica/IA.",
     }),
     analysis: async () => ({}),
-    analyzeBatch: async () => ({
-      processed: [],
-      processedCount: 0,
-      errors: [],
-      pendingCount: 249,
-      poolSize: 250,
-      analyzedCount: 1,
-    }),
+    jobStatus: async () => ({ job: null, catalogPending: 249, hasActiveJob: false }),
+    startJob: async () => ({ job: null, catalogPending: 249, hasActiveJob: false }),
+    resumeJob: async () => ({ job: null, catalogPending: 249, hasActiveJob: false }),
+    cancelJob: async () => ({ job: null, catalogPending: 249, hasActiveJob: false }),
   },
 }));
 

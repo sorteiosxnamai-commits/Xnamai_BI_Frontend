@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EntityDetailDrawer } from "../components/feedback/EntityDetailDrawer";
 import { retailApi, type RetailChannel, type RetailProduct } from "./retailApi";
 
@@ -105,8 +105,8 @@ function ProductDetail({
             </span>
             <h3>{product.name}</h3>
             <p>
-              Codigo {product.code || "-"} ÿ Score {product.recomendacaoScore.toFixed(1)}
-              {product.rank ? ` ÿ Rank #${product.rank}` : ""}
+              Codigo {product.code || "-"} ? Score {product.recomendacaoScore.toFixed(1)}
+              {product.rank ? ` ? Rank #${product.rank}` : ""}
             </p>
           </div>
           <button type="button" className="row-action" onClick={onRefresh} disabled={refreshing}>
@@ -225,18 +225,52 @@ export function RetailRecommendedPage() {
     queryFn: () => retailApi.recommended(100),
   });
 
+  const jobStatus = useQuery({
+    queryKey: ["retail-job"],
+    queryFn: () => retailApi.jobStatus(),
+    refetchInterval: (query) => (query.state.data?.hasActiveJob ? 2500 : 12_000),
+  });
+
   const detail = useQuery({
     queryKey: ["retail-analysis", selectedId, refreshToken],
     queryFn: () => retailApi.analysis(selectedId as string, refreshToken > 0),
     enabled: Boolean(selectedId),
   });
 
-  const batch = useMutation({
-    mutationFn: () => retailApi.analyzeBatch(10),
+  const startJob = useMutation({
+    mutationFn: (payload: { mode: "batch" | "all"; batchSize?: number }) =>
+      retailApi.startJob(payload.mode, payload.batchSize ?? 10, true),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["retail-job"] });
       void queryClient.invalidateQueries({ queryKey: ["retail-recommended"] });
     },
   });
+
+  const resumeJob = useMutation({
+    mutationFn: (id: number) => retailApi.resumeJob(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["retail-job"] });
+    },
+  });
+
+  const cancelJob = useMutation({
+    mutationFn: (id: number) => retailApi.cancelJob(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["retail-job"] });
+      void queryClient.invalidateQueries({ queryKey: ["retail-recommended"] });
+    },
+  });
+
+  const job = jobStatus.data?.job;
+  const jobRunning = Boolean(jobStatus.data?.hasActiveJob);
+  const catalogPending = jobStatus.data?.catalogPending ?? recommended.data?.pendingCount ?? 0;
+
+  useEffect(() => {
+    if (!job) return;
+    if (job.status === "completed" || job.processed > 0) {
+      void queryClient.invalidateQueries({ queryKey: ["retail-recommended"] });
+    }
+  }, [job?.status, job?.processed, job, queryClient]);
 
   const data = recommended.data;
   const items = data?.items || [];
@@ -259,23 +293,67 @@ export function RetailRecommendedPage() {
           <strong>
             {data?.analyzedCount ?? 0}/{data?.poolSize ?? 0} analisados no catalogo
           </strong>
-          <span>{data?.pendingCount ?? 0} pendentes - Top 100 apos rateamento</span>
-          <button
-            type="button"
-            className="row-action"
-            disabled={batch.isPending || (data?.pendingCount ?? 0) === 0}
-            onClick={() => batch.mutate()}
-          >
-            {batch.isPending ? "Analisando..." : "Analisar proximos 10"}
-          </button>
-          {batch.isError && (
+          <span>{catalogPending} pendentes - Top 100 apos rateamento</span>
+
+          {job && (
+            <div className="retail-job-box">
+              <strong>
+                Job #{job.id}: {job.status} - {job.cursor}/{job.total} ({job.progressPct}%)
+              </strong>
+              <span>
+                ok {job.processed} ÿ falhas {job.failed}
+                {job.currentProductId ? ` ÿ atual ${job.currentProductId}` : ""}
+              </span>
+              {job.lastError && <em className="retail-error">{job.lastError}</em>}
+            </div>
+          )}
+
+          <div className="retail-job-actions">
+            <button
+              type="button"
+              className="row-action"
+              disabled={jobRunning || startJob.isPending || catalogPending === 0}
+              onClick={() => startJob.mutate({ mode: "batch", batchSize: 10 })}
+            >
+              {jobRunning && job?.mode === "batch" ? "Processando..." : "Analisar proximos 10"}
+            </button>
+            <button
+              type="button"
+              className="row-action"
+              disabled={jobRunning || startJob.isPending || catalogPending === 0}
+              onClick={() => startJob.mutate({ mode: "all", batchSize: 10 })}
+            >
+              {jobRunning && job?.mode === "all" ? "Catalogo em andamento..." : "Analisar catalogo (retomavel)"}
+            </button>
+            {job?.resumable && (
+              <button
+                type="button"
+                className="row-action"
+                disabled={resumeJob.isPending || jobRunning}
+                onClick={() => resumeJob.mutate(job.id)}
+              >
+                Retomar job
+              </button>
+            )}
+            {jobRunning && job && (
+              <button
+                type="button"
+                className="row-action"
+                disabled={cancelJob.isPending}
+                onClick={() => cancelJob.mutate(job.id)}
+              >
+                Pausar / cancelar
+              </button>
+            )}
+          </div>
+          {startJob.isError && (
             <em className="retail-error">
-              {batch.error instanceof Error ? batch.error.message : "Falha no lote"}
+              {startJob.error instanceof Error ? startJob.error.message : "Falha ao iniciar job"}
             </em>
           )}
-          {batch.isSuccess && (
-            <em className="retail-ok">{batch.data.processedCount} produtos processados</em>
-          )}
+          <em className="retail-muted">
+            Cada produto e salvo ao concluir. Se cair timeout, use Retomar - nao perde o que ja rodou.
+          </em>
         </div>
       </section>
 

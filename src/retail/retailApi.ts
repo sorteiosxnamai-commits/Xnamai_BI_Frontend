@@ -68,13 +68,34 @@ export type RetailRecommendedResponse = {
   disclaimer: string;
 };
 
-export type RetailBatchResponse = {
-  processed: { id: string; name?: string; recomendacaoScore?: number; melhorPlataforma?: string; heuristic?: boolean }[];
-  processedCount: number;
-  errors: { id: string; error: string }[];
-  pendingCount: number;
-  poolSize: number;
-  analyzedCount: number;
+export type RetailJob = {
+  id: number;
+  status: string;
+  mode: string;
+  batchSize: number;
+  total: number;
+  cursor: number;
+  processed: number;
+  failed: number;
+  skipped: number;
+  remainingInJob: number;
+  progressPct: number;
+  currentProductId?: string | null;
+  lastError?: string | null;
+  errors?: { id: string; error: string; at?: string }[];
+  catalogPending?: number | null;
+  heartbeatAt?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  resumable?: boolean;
+  running?: boolean;
+};
+
+export type RetailJobSnapshot = {
+  job: RetailJob | null;
+  catalogPending: number;
+  hasActiveJob: boolean;
+  created?: boolean;
 };
 
 async function retailRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -109,10 +130,19 @@ export const retailApi = {
     retailRequest<RetailProduct>(
       `/api/v1/retail/products/${encodeURIComponent(id)}/analysis${refresh ? "?refresh=true" : ""}`,
     ),
-  analyzeBatch: (limit = 10, refresh = false) =>
-    retailRequest<RetailBatchResponse>(`/api/v1/retail/analyze-batch`, {
+  startJob: (mode: "batch" | "all" = "batch", batchSize = 10, resume = true) =>
+    retailRequest<RetailJobSnapshot>(`/api/v1/retail/analyze-jobs`, {
       method: "POST",
-      body: JSON.stringify({ limit, refresh }),
+      body: JSON.stringify({ mode, batchSize, resume }),
+    }),
+  jobStatus: () => retailRequest<RetailJobSnapshot>(`/api/v1/retail/analyze-jobs/active`),
+  resumeJob: (id: number) =>
+    retailRequest<RetailJobSnapshot>(`/api/v1/retail/analyze-jobs/${id}/resume`, {
+      method: "POST",
+    }),
+  cancelJob: (id: number) =>
+    retailRequest<RetailJobSnapshot>(`/api/v1/retail/analyze-jobs/${id}/cancel`, {
+      method: "POST",
     }),
   economics: () => retailRequest<Record<string, unknown>>("/api/v1/retail/economics"),
 };
