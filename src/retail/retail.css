@@ -21,6 +21,79 @@
   font-size: 14px;
   line-height: 1.5;
 }
+.retail-progress-block {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.retail-progress-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+.retail-phase-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #747d90 16%, transparent);
+  color: var(--muted, #747d90);
+  white-space: nowrap;
+}
+.retail-phase-pill.phase-running,
+.retail-phase-pill.phase-finishing,
+.retail-phase-pill.phase-queued {
+  background: color-mix(in srgb, #2f6fed 18%, transparent);
+  color: #2f6fed;
+}
+.retail-phase-pill.phase-chaining {
+  background: color-mix(in srgb, #0f766e 18%, transparent);
+  color: #0f766e;
+}
+.retail-job-box.is-chaining {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #0f766e 40%, transparent);
+}
+.retail-progress-track--pulse {
+  overflow: hidden;
+}
+.retail-progress-fill--indeterminate {
+  width: 40% !important;
+  animation: retail-indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes retail-indeterminate {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(280%); }
+}
+.retail-batch-list {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+.retail-batch-list small {
+  color: var(--muted, #747d90);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.retail-batch-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.retail-batch-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.retail-batch-list em {
+  font-style: normal;
+  color: var(--muted, #747d90);
+}
 .retail-progress {
   display: grid;
   gap: 8px;

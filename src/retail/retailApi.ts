@@ -89,6 +89,19 @@ export type RetailRecommendedResponse = {
   disclaimer: string;
 };
 
+export type RetailBatchSummary = {
+  id: number;
+  status: string;
+  mode: string;
+  total: number;
+  done: number;
+  processed: number;
+  failed: number;
+  progressPct: number;
+  finishedAt?: string | null;
+  startedAt?: string | null;
+};
+
 export type RetailJob = {
   id: number;
   status: string;
@@ -97,11 +110,18 @@ export type RetailJob = {
   concurrency?: number;
   total: number;
   cursor: number;
+  done?: number;
   processed: number;
   failed: number;
   skipped: number;
   remainingInJob: number;
+  claimedRemaining?: number;
   progressPct: number;
+  claimPct?: number;
+  phase?: string;
+  phaseLabel?: string;
+  batchNumber?: number | null;
+  estimatedBatchesRemaining?: number | null;
   currentProductId?: string | null;
   lastError?: string | null;
   errors?: { id: string; error: string; at?: string }[];
@@ -120,8 +140,24 @@ export type RetailJobSnapshot = {
   catalogPending: number;
   catalogAnalyzed?: number;
   catalogPoolSize?: number;
+  catalogPct?: number;
   hasActiveJob: boolean;
+  chainingNextBatch?: boolean;
   created?: boolean;
+  pipeline?: {
+    phase: string;
+    phaseLabel: string;
+    batchNumber?: number | null;
+    estimatedBatchesRemaining?: number | null;
+    chunkSize?: number;
+    recentBatches?: RetailBatchSummary[];
+    catalog?: {
+      analyzed: number;
+      pending: number;
+      poolSize: number;
+      pct: number;
+    };
+  };
 };
 
 async function reportClientLog(payload: {

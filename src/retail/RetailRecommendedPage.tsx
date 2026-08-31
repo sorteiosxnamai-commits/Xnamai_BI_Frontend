@@ -267,19 +267,26 @@ export function RetailRecommendedPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const [autoResumeTried, setAutoResumeTried] = useState(false);
+  const [lastCompletedBatchId, setLastCompletedBatchId] = useState<number | null>(null);
 
   const jobStatus = useQuery({
     queryKey: ["retail-job"],
     queryFn: () => retailApi.jobStatus(),
-    refetchInterval: (query) => (query.state.data?.hasActiveJob ? 3000 : 15_000),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.hasActiveJob || data?.chainingNextBatch) return 2000;
+      return 12_000;
+    },
   });
 
   const jobRunning = Boolean(jobStatus.data?.hasActiveJob);
+  const chaining = Boolean(jobStatus.data?.chainingNextBatch);
+  const pipelineBusy = jobRunning || chaining;
 
   const recommended = useQuery({
     queryKey: ["retail-recommended"],
     queryFn: () => retailApi.recommended(100),
-    refetchInterval: jobRunning ? 8000 : false,
+    refetchInterval: pipelineBusy ? 8000 : false,
   });
 
   const detail = useQuery({
@@ -314,36 +321,55 @@ export function RetailRecommendedPage() {
   });
 
   const job = jobStatus.data?.job;
+  const pipeline = jobStatus.data?.pipeline;
   const catalogPending =
-    jobStatus.data?.catalogPending ?? recommended.data?.pendingCount ?? 0;
+    pipeline?.catalog?.pending ??
+    jobStatus.data?.catalogPending ??
+    recommended.data?.pendingCount ??
+    0;
   const catalogAnalyzed =
+    pipeline?.catalog?.analyzed ??
     jobStatus.data?.catalogAnalyzed ??
     job?.catalogAnalyzed ??
     recommended.data?.analyzedCount ??
     0;
   const catalogPool =
+    pipeline?.catalog?.poolSize ??
     jobStatus.data?.catalogPoolSize ??
     job?.catalogPoolSize ??
     recommended.data?.poolSize ??
     0;
   const catalogPct =
-    catalogPool > 0 ? Math.min(100, Math.round((catalogAnalyzed / catalogPool) * 1000) / 10) : 0;
+    pipeline?.catalog?.pct ??
+    jobStatus.data?.catalogPct ??
+    (catalogPool > 0 ? Math.min(100, Math.round((catalogAnalyzed / catalogPool) * 1000) / 10) : 0);
+  const jobDone = job?.done ?? (job ? job.processed + job.failed + job.skipped : 0);
   const jobPct = job ? Math.min(100, Number(job.progressPct) || 0) : 0;
+  const batchNumber = job?.batchNumber ?? pipeline?.batchNumber ?? null;
+  const batchesLeft = job?.estimatedBatchesRemaining ?? pipeline?.estimatedBatchesRemaining ?? null;
+  const phase = pipeline?.phase || job?.phase || (pipelineBusy ? "running" : "idle");
+  const phaseLabel =
+    pipeline?.phaseLabel ||
+    job?.phaseLabel ||
+    (chaining ? "Preparando proximo lote..." : pipelineBusy ? "Analisando..." : "Aguardando");
+  const recentBatches = pipeline?.recentBatches || [];
 
   useEffect(() => {
     if (!job) return;
     if (job.status === "completed" || job.processed > 0) {
       void queryClient.invalidateQueries({ queryKey: ["retail-recommended"] });
     }
-  }, [job?.status, job?.processed, job?.cursor, job, queryClient]);
+    if (job.status === "completed") {
+      setLastCompletedBatchId(job.id);
+    }
+  }, [job?.status, job?.processed, job?.cursor, job?.done, job, queryClient]);
 
   useEffect(() => {
-    if (autoResumeTried || jobRunning || !job?.resumable || !job.id) return;
+    if (autoResumeTried || jobRunning || chaining || !job?.resumable || !job.id) return;
     setAutoResumeTried(true);
     resumeJob.mutate(job.id);
-    // Auto-resume once per page load for interrupted/failed jobs (timeout recovery).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoResumeTried, job?.id, job?.resumable, jobRunning]);
+  }, [autoResumeTried, job?.id, job?.resumable, jobRunning, chaining]);
 
   const data = recommended.data;
   const items = data?.items || [];
@@ -364,46 +390,107 @@ export function RetailRecommendedPage() {
           </p>
         </div>
         <div className="retail-progress">
-          <strong>
-            {catalogAnalyzed}/{catalogPool || data?.poolSize || 0} analisados no catalogo
-          </strong>
-          <span>
-            {catalogPending} pendentes - Top 100 atualiza a cada lote concluido
-          </span>
-
-          <div
-            className="retail-progress-track"
-            role="progressbar"
-            aria-valuenow={catalogPct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Progresso do catalogo"
-          >
-            <div className="retail-progress-fill" style={{ width: `${catalogPct}%` }} />
-          </div>
-          <span className="retail-progress-meta">{catalogPct}% do catalogo</span>
-
-          {job && (
-            <div className={`retail-job-box${jobRunning ? " is-running" : ""}`}>
+          <div className="retail-progress-block">
+            <div className="retail-progress-title-row">
               <strong>
-                Job #{job.id}: {job.status} - lote {job.cursor}/{job.total} ({jobPct}%)
+                Catalogo: {catalogAnalyzed}/{catalogPool || data?.poolSize || 0}
               </strong>
-              <div
-                className="retail-progress-track retail-progress-track--job"
-                role="progressbar"
-                aria-valuenow={jobPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Progresso do lote atual"
-              >
-                <div className="retail-progress-fill retail-progress-fill--job" style={{ width: `${jobPct}%` }} />
-              </div>
-              <span>
-                ok {job.processed} / falhas {job.failed}
-                {job.concurrency ? ` / ${job.concurrency} workers` : ""}
-                {job.currentProductId ? ` / atual ${job.currentProductId}` : ""}
-              </span>
-              {job.lastError && <em className="retail-error">{job.lastError}</em>}
+              <span className={`retail-phase-pill phase-${phase}`}>{phaseLabel}</span>
+            </div>
+            <span>
+              {catalogPending} pendentes  -  {catalogPct}% concluido
+              {batchesLeft != null && pipelineBusy
+                ? `  -  ~${batchesLeft} lote(s) restante(s)`
+                : ""}
+            </span>
+            <div
+              className="retail-progress-track"
+              role="progressbar"
+              aria-valuenow={catalogPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progresso do catalogo"
+            >
+              <div className="retail-progress-fill" style={{ width: `${catalogPct}%` }} />
+            </div>
+          </div>
+
+          {(job || chaining) && (
+            <div
+              className={`retail-job-box${jobRunning || chaining ? " is-running" : ""}${
+                chaining ? " is-chaining" : ""
+              }`}
+            >
+              <strong>
+                {chaining
+                  ? `Lote ${batchNumber || lastCompletedBatchId || ""} concluido - carregando proximo...`
+                  : `Lote ${batchNumber || `#${job?.id}`}  -  ${job?.status || "aguardando"}`}
+              </strong>
+              {!chaining && job && (
+                <>
+                  <span>
+                    Conclusao do lote: {jobDone}/{job.total} ({jobPct}%)
+                    {job.claimPct != null && job.claimPct > jobPct
+                      ? `  -  reivindicados ${job.cursor}/${job.total}`
+                      : ""}
+                  </span>
+                  <div
+                    className="retail-progress-track retail-progress-track--job"
+                    role="progressbar"
+                    aria-valuenow={jobPct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Progresso do lote atual"
+                  >
+                    <div
+                      className="retail-progress-fill retail-progress-fill--job"
+                      style={{ width: `${jobPct}%` }}
+                    />
+                  </div>
+                  <span>
+                    ok {job.processed}  -  falhas {job.failed}
+                    {job.concurrency ? `  -  ${job.concurrency} workers` : ""}
+                    {job.phase === "finishing"
+                      ? "  -  finalizando buscas IA deste lote"
+                      : job.currentProductId
+                        ? `  -  atual ${job.currentProductId}`
+                        : ""}
+                  </span>
+                </>
+              )}
+              {chaining && (
+                <>
+                  <div className="retail-progress-track retail-progress-track--job retail-progress-track--pulse">
+                    <div className="retail-progress-fill retail-progress-fill--job retail-progress-fill--indeterminate" />
+                  </div>
+                  <span>
+                    Montando o proximo lote de buscas no catalogo. A barra principal continua
+                    subindo a cada produto salvo.
+                  </span>
+                </>
+              )}
+              {job?.lastError && job.phase !== "completed" && !chaining && (
+                <em className="retail-error">Ultima falha unitaria: {job.lastError}</em>
+              )}
+            </div>
+          )}
+
+          {!!recentBatches.length && (
+            <div className="retail-batch-list">
+              <small>Lotes recentes</small>
+              <ul>
+                {recentBatches.map((batch) => (
+                  <li key={batch.id}>
+                    <span>
+                      #{batch.id}  -  {batch.status}
+                    </span>
+                    <em>
+                      {batch.processed}/{batch.total} ok
+                      {batch.failed ? `  -  ${batch.failed} falhas` : ""}
+                    </em>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -411,17 +498,19 @@ export function RetailRecommendedPage() {
             <button
               type="button"
               className="row-action"
-              disabled={jobRunning || startJob.isPending || catalogPending === 0}
+              disabled={pipelineBusy || startJob.isPending || catalogPending === 0}
               onClick={() => startJob.mutate({ mode: "all", batchSize: 5 })}
             >
               {jobRunning && job?.mode === "all"
-                ? `Analisando em paralelo (${job.concurrency || 5})...`
-                : "Analisar catalogo em paralelo"}
+                ? `Analisando lote ${batchNumber || ""} (${job.concurrency || 2})...`
+                : chaining
+                  ? "Carregando proximo lote..."
+                  : "Analisar catalogo em paralelo"}
             </button>
             <button
               type="button"
               className="row-action"
-              disabled={jobRunning || startJob.isPending || catalogPending === 0}
+              disabled={pipelineBusy || startJob.isPending || catalogPending === 0}
               onClick={() => startJob.mutate({ mode: "batch", batchSize: 10 })}
             >
               {jobRunning && job?.mode === "batch" ? "Processando..." : "Analisar proximos 10"}
@@ -430,7 +519,7 @@ export function RetailRecommendedPage() {
               <button
                 type="button"
                 className="row-action"
-                disabled={resumeJob.isPending || jobRunning}
+                disabled={resumeJob.isPending || pipelineBusy}
                 onClick={() => resumeJob.mutate(job.id)}
               >
                 Retomar job
@@ -459,8 +548,8 @@ export function RetailRecommendedPage() {
             </em>
           )}
           <em className="retail-muted">
-            Cada produto e salvo ao concluir. Em timeout ou queda, o job fica retomavel e a barra
-            continua de onde parou.
+            Cada produto e salvo ao concluir. Ao terminar um lote, o sistema prepara o proximo
+            automaticamente ate o catalogo acabar.
           </em>
         </div>
       </section>
@@ -501,9 +590,9 @@ export function RetailRecommendedPage() {
       <section className="module-card">
         <div className="retail-list-head">
           <p className="retail-disclaimer">{data?.disclaimer}</p>
-          {jobRunning && (
+          {pipelineBusy && (
             <span className="retail-live-pill" aria-live="polite">
-              Atualizando lista...
+              {chaining ? "Carregando proximo lote..." : "Atualizando lista..."}
             </span>
           )}
         </div>
