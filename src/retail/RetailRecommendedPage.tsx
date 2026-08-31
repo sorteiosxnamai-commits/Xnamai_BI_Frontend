@@ -266,7 +266,7 @@ export function RetailRecommendedPage() {
   const jobStatus = useQuery({
     queryKey: ["retail-job"],
     queryFn: () => retailApi.jobStatus(),
-    refetchInterval: (query) => (query.state.data?.hasActiveJob ? 2000 : 10_000),
+    refetchInterval: (query) => (query.state.data?.hasActiveJob ? 3000 : 15_000),
   });
 
   const jobRunning = Boolean(jobStatus.data?.hasActiveJob);
@@ -274,7 +274,7 @@ export function RetailRecommendedPage() {
   const recommended = useQuery({
     queryKey: ["retail-recommended"],
     queryFn: () => retailApi.recommended(100),
-    refetchInterval: jobRunning ? 4000 : false,
+    refetchInterval: jobRunning ? 8000 : false,
   });
 
   const detail = useQuery({

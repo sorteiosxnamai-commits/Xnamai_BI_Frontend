@@ -124,6 +124,27 @@ export type RetailJobSnapshot = {
   created?: boolean;
 };
 
+async function reportClientLog(payload: {
+  level?: "info" | "warn" | "error";
+  message: string;
+  path?: string;
+  detail?: unknown;
+}) {
+  try {
+    await fetch("/api/client-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        path: payload.path || (typeof window !== "undefined" ? window.location.pathname : undefined),
+      }),
+      keepalive: true,
+    });
+  } catch {
+    /* never block UX on logging */
+  }
+}
+
 async function retailRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL nao configurada");
   const controller = new AbortController();
@@ -147,18 +168,27 @@ async function retailRequest<T>(path: string, init?: RequestInit): Promise<T> {
       } catch {
         /* keep raw */
       }
+      void reportClientLog({
+        level: "error",
+        message: `retail API ${response.status}`,
+        path,
+        detail: message.slice(0, 500),
+      });
       throw new Error(message);
     }
     if (response.status === 204) return {} as T;
     return response.json() as Promise<T>;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("Timeout na API - o job continua no servidor; atualize ou use Retomar.");
+      const message = "Timeout na API - o job continua no servidor; atualize ou use Retomar.";
+      void reportClientLog({ level: "error", message, path });
+      throw new Error(message);
     }
     if (error instanceof TypeError) {
-      throw new Error(
-        "Falha de rede (Failed to fetch). Se o job ja iniciou, use Retomar; o progresso nao e perdido.",
-      );
+      const message =
+        "Falha de rede (Failed to fetch). Se o job ja iniciou, use Retomar; o progresso nao e perdido.";
+      void reportClientLog({ level: "error", message, path, detail: String(error.message || error) });
+      throw new Error(message);
     }
     throw error;
   } finally {
