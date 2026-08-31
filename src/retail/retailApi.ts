@@ -94,6 +94,8 @@ export type RetailJob = {
   lastError?: string | null;
   errors?: { id: string; error: string; at?: string }[];
   catalogPending?: number | null;
+  catalogAnalyzed?: number | null;
+  catalogPoolSize?: number | null;
   heartbeatAt?: string | null;
   startedAt?: string | null;
   finishedAt?: string | null;
@@ -104,32 +106,52 @@ export type RetailJob = {
 export type RetailJobSnapshot = {
   job: RetailJob | null;
   catalogPending: number;
+  catalogAnalyzed?: number;
+  catalogPoolSize?: number;
   hasActiveJob: boolean;
   created?: boolean;
 };
 
 async function retailRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_URL) throw new Error("VITE_BI_API_URL nao configurada");
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    let message = text || `${response.status} ${response.statusText}`;
-    try {
-      const parsed = JSON.parse(text) as { detail?: unknown };
-      if (typeof parsed.detail === "string" && parsed.detail) message = parsed.detail;
-    } catch {
-      /* keep raw */
+  const controller = new AbortController();
+  const timeoutMs = path.includes("analyze-jobs") && init?.method === "POST" ? 60_000 : 45_000;
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      let message = text || `${response.status} ${response.statusText}`;
+      try {
+        const parsed = JSON.parse(text) as { detail?: unknown };
+        if (typeof parsed.detail === "string" && parsed.detail) message = parsed.detail;
+      } catch {
+        /* keep raw */
+      }
+      throw new Error(message);
     }
-    throw new Error(message);
+    if (response.status === 204) return {} as T;
+    return response.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Timeout na API - o job continua no servidor; atualize ou use Retomar.");
+    }
+    if (error instanceof TypeError) {
+      throw new Error(
+        "Falha de rede (Failed to fetch). Se o job ja iniciou, use Retomar; o progresso nao e perdido.",
+      );
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
   }
-  if (response.status === 204) return {} as T;
-  return response.json() as Promise<T>;
 }
 
 export const retailApi = {

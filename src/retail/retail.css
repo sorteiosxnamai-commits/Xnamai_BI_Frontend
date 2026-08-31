@@ -25,15 +25,59 @@
   display: grid;
   gap: 8px;
   justify-items: start;
+  width: 100%;
+}
+.retail-progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #2f6fed 12%, #e8ecf3);
+  overflow: hidden;
+}
+.retail-progress-track--job {
+  height: 8px;
+  background: color-mix(in srgb, #111827 8%, #dfe7f5);
+}
+.retail-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f6fed, #45a0ff);
+  transition: width 0.45s ease;
+}
+.retail-progress-fill--job {
+  background: linear-gradient(90deg, #0f766e, #14b8a6);
+}
+.retail-progress-meta {
+  font-size: 12px !important;
 }
 .retail-job-box {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   padding: 10px 12px;
   border-radius: 10px;
   background: color-mix(in srgb, #2f6fed 10%, transparent);
   font-size: 13px;
   width: 100%;
+}
+.retail-job-box.is-running {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #2f6fed 35%, transparent);
+}
+.retail-list-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.retail-live-pill {
+  flex: none;
+  font-size: 12px;
+  color: #0f766e;
+  background: color-mix(in srgb, #14b8a6 14%, transparent);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 .retail-channel-why {
   margin: 10px 0 0;
