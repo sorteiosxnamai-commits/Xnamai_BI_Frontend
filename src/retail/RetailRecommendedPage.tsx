@@ -8,6 +8,18 @@ function money(value?: number | null) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function isSafeListingUrl(url?: string | null) {
+  if (!url) return false;
+  const text = url.trim();
+  if (!text || text.includes("...") || text.includes("…")) return false;
+  try {
+    const parsed = new URL(text);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function pct(value?: number | null) {
   if (value == null || Number.isNaN(value)) return "-";
   return `${value.toFixed(1)}%`;
@@ -52,7 +64,7 @@ function ChannelTable({ channels }: { channels?: RetailChannel[] }) {
                 <td>
                   {row.hasPrice === false || row.retailPrice == null ? (
                     <span className="retail-muted">Sem anuncio encontrado</span>
-                  ) : row.url ? (
+                  ) : isSafeListingUrl(row.url) ? (
                     <a href={row.url} target="_blank" rel="noreferrer">
                       {money(row.retailPrice)}
                     </a>
@@ -65,7 +77,7 @@ function ChannelTable({ channels }: { channels?: RetailChannel[] }) {
                     <ul className="retail-sellers">
                       {listings.slice(0, 6).map((item) => (
                         <li key={`${item.seller}-${item.price}-${item.url || ""}`}>
-                          {item.url ? (
+                          {isSafeListingUrl(item.url) ? (
                             <a href={item.url} target="_blank" rel="noreferrer">
                               {item.seller || "Vendedor"}
                             </a>
@@ -123,8 +135,15 @@ function ProductDetail({
   if (!product) {
     return <p className="retail-empty">Produto nao encontrado.</p>;
   }
-  const best = product.channels?.find((row) => row.hasPrice !== false && row.retailPrice != null)
-    || product.channels?.[0];
+  const best =
+    product.channels?.find(
+      (row) =>
+        row.platform === product.melhorPlataforma &&
+        row.hasPrice !== false &&
+        row.retailPrice != null,
+    ) ||
+    product.channels?.find((row) => row.hasPrice !== false && row.retailPrice != null) ||
+    product.channels?.[0];
   return (
     <div className="retail-detail">
       <section className="retail-block">
@@ -188,13 +207,14 @@ function ProductDetail({
         <h4>Precos por plataforma (mesmo produto)</h4>
         <p className="retail-muted">
           Busca em paralelo em todas as plataformas, com varias queries e 2a passagem quando
-          houver poucos vendedores. Margem usa a mediana dos anuncios validos.
+          houver poucos vendedores. Preco do canal = mediana dos anuncios reais (sem Loja A/B/C
+          ficticias). Links invalidos nao sao exibidos.
         </p>
         <ChannelTable channels={product.channels} />
       </section>
 
       <section className="retail-block">
-        <h4>Breakdown financeiro (melhor canal com preco real)</h4>
+        <h4>Breakdown financeiro (canal recomendado)</h4>
         {!best && <p className="retail-empty">Sem breakdown - nenhum anuncio real encontrado ainda.</p>}
         {best && (
           <dl className="retail-facts">
