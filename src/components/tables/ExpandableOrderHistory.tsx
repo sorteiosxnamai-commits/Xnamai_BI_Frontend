@@ -39,9 +39,9 @@ function OrderItems({
         <tr>
           <th>Produto</th>
           <th>Qtd.</th>
-          <th>Unitário do pedido</th>
+          <th>Unitário Mercos</th>
+          <th>Total Mercos</th>
           <th>Preço de tabela</th>
-          <th>Total</th>
         </tr>
       </thead>
       <tbody>
@@ -49,11 +49,15 @@ function OrderItems({
           <tr key={item.id || item.position}>
             <td>{item.name}</td>
             <td>{item.quantity.toLocaleString("pt-BR")}</td>
-            <td>{money.format(item.sourceUnitPrice)}</td>
             <td>
               {item.unitPrice == null ? "Indisponível" : money.format(item.unitPrice)}
             </td>
             <td>{item.total == null ? "Indisponível" : money.format(item.total)}</td>
+            <td>
+              {item.catalogUnitPrice == null
+                ? "—"
+                : money.format(item.catalogUnitPrice)}
+            </td>
           </tr>
         ))}
       </tbody>

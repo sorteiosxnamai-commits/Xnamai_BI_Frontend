@@ -195,7 +195,8 @@ const orderDetailSchema = z.object({
       discount: z.coerce.number(),
       total: z.coerce.number().nullable(),
       sourceTotal: z.coerce.number(),
-      priceSource: z.enum(["catalog", "unavailable"]),
+      catalogUnitPrice: z.coerce.number().nullable().optional(),
+      priceSource: z.enum(["catalog", "unavailable", "mercos"]),
     })
   ),
   appliedFilters: z.record(z.string(), z.unknown()),

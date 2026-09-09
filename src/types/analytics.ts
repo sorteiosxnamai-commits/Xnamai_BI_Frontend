@@ -196,7 +196,8 @@ export type OrderDetailResponse = {
     discount: number;
     total: number | null;
     sourceTotal: number;
-    priceSource: "catalog" | "unavailable";
+    catalogUnitPrice?: number | null;
+    priceSource: "catalog" | "unavailable" | "mercos";
   }[];
   metadata: AnalyticsMetadata;
 };

@@ -99,7 +99,7 @@ export function ProductsPage({ filters }: { filters: AnalyticsFilters }) {
 
       <ServerEntityTable
         title="Produtos"
-        description="Giro, faturamento, share, estoque e classificacao ABC."
+        description="Giro, faturamento Mercos, share, estoque e classificacao ABC."
         queryKey={["analytics", "products", filters]}
         columns={columns}
         defaultSort="revenue"

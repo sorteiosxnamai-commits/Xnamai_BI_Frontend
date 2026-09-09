@@ -14,8 +14,8 @@ const money = new Intl.NumberFormat("pt-BR", {
 const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
 const KPI_LABELS: Record<string, string> = {
-  grossRevenue: "Faturamento a preço de tabela",
-  netRevenue: "Faturamento a preço de tabela",
+  grossRevenue: "Faturamento bruto Mercos",
+  netRevenue: "Faturamento Mercos",
   orders: "Pedidos válidos",
   averageTicket: "Ticket médio",
   customers: "Compradores únicos",

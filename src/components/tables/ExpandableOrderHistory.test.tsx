@@ -45,7 +45,8 @@ test("expands an order row and loads its items", async () => {
         discount: 0,
         total: 13800,
         sourceTotal: 13800,
-        priceSource: "catalog",
+        catalogUnitPrice: 15000,
+        priceSource: "mercos",
       },
     ],
     metadata: {

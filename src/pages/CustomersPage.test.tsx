@@ -157,7 +157,7 @@ test("shows exclusive customer bands with per-customer averages", async () => {
     </QueryClientProvider>
   );
 
-  expect(await screen.findByText(/Faturamento a preço de tabela/)).toBeInTheDocument();
+  expect(await screen.findByText(/Faturamento Mercos/)).toBeInTheDocument();
   expect(screen.getByRole("searchbox", { name: "Buscar cliente para tirar da conta" })).toBeInTheDocument();
   expect(screen.getByText("R$ 613.415,37")).toBeInTheDocument();
   expect(screen.getByText("Top 5")).toBeInTheDocument();

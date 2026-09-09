@@ -159,7 +159,7 @@ function CustomerCohortCards({
   return (
     <>
       <p className="cohort-heading">
-        Faturamento a preço de tabela: <strong>{money.format(totalRevenue)}</strong>{" "}
+        Faturamento Mercos: <strong>{money.format(totalRevenue)}</strong>{" "}
         dividido em 4 faixas que somam 100%. Clique numa faixa para ver os clientes e
         tirá-los da conta.
       </p>
@@ -263,7 +263,7 @@ function CustomerCohortCards({
       ) : null}
       <p className="cohort-note">
         As faixas não se sobrepõem: Top 5 + 6º ao 10º + 11º ao 20º + demais = 100% do
-        faturamento a preço de tabela, a mesma base da visão geral. Por cliente é o
+        faturamento Mercos, a mesma base da visão geral. Por cliente é o
         faturamento da faixa dividido pelos clientes dela. Ticket médio é o valor médio
         de cada pedido desses clientes.
       </p>
