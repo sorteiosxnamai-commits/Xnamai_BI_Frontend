@@ -43,9 +43,20 @@ const kpiSchema = z.object({
   definition: z.string(),
 });
 
+const comparisonSchema = z
+  .object({
+    currentFrom: z.string(),
+    currentTo: z.string(),
+    previousFrom: z.string(),
+    previousTo: z.string(),
+  })
+  .nullable()
+  .optional();
+
 const overviewSchema = z.object({
   kpis: z.record(z.string(), kpiSchema),
   appliedFilters: z.record(z.string(), z.unknown()),
+  comparison: comparisonSchema,
   metadata: metadataSchema,
 });
 
@@ -65,6 +76,7 @@ const timeseriesSchema = z.object({
   previousItems: z.array(timeseriesPointSchema),
   granularity: z.enum(["day", "week", "month", "quarter", "year"]),
   appliedFilters: z.record(z.string(), z.unknown()),
+  comparison: comparisonSchema,
   metadata: metadataSchema,
 });
 

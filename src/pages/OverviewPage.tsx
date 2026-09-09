@@ -5,13 +5,25 @@ import { BuyerCompositionChart } from "../components/charts/BuyerCompositionChar
 import { CommercialBreakdownCharts } from "../components/charts/CommercialBreakdownCharts";
 import { RevenueEvolutionChart } from "../components/charts/RevenueEvolutionChart";
 import { MetadataStatus, QueryState } from "../components/feedback/QueryState";
-import type { AnalyticsFilters, KpiValue } from "../types/analytics";
+import type { AnalyticsFilters, ComparisonPeriod, KpiValue } from "../types/analytics";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
 const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+
+function formatBrDate(iso: string) {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function comparisonSuffix(comparison?: ComparisonPeriod | null) {
+  if (!comparison?.previousFrom || !comparison.previousTo) {
+    return " vs. mesmo período do mês anterior";
+  }
+  return ` vs. ${formatBrDate(comparison.previousFrom)} a ${formatBrDate(comparison.previousTo)}`;
+}
 
 const KPI_LABELS: Record<string, string> = {
   grossRevenue: "Faturamento bruto Mercos",
@@ -47,10 +59,12 @@ function KpiCard({
   name,
   kpi,
   search,
+  comparisonLabel,
 }: {
   name: string;
   kpi: KpiValue;
   search: string;
+  comparisonLabel: string;
 }) {
   const customerKpis = ["customers", "newBuyers", "recurringBuyers"];
   const productKpis = ["items", "skus", "itemsPerOrder"];
@@ -76,7 +90,7 @@ function KpiCard({
             ? "Sem base de comparação"
             : `${kpi.percentageChange >= 0 ? "+" : ""}${number.format(
                 kpi.percentageChange
-              )}% vs. anterior`}
+              )}%${comparisonLabel}`}
         </small>
         <p>{kpi.definition}</p>
       </article>
@@ -120,7 +134,13 @@ export function OverviewPage({ filters }: { filters: AnalyticsFilters }) {
         {Object.entries(overview.data.kpis)
           .filter(([name]) => name !== "grossRevenue")
           .map(([name, kpi]) => (
-          <KpiCard key={name} name={name} kpi={kpi} search={location.search} />
+          <KpiCard
+            key={name}
+            name={name}
+            kpi={kpi}
+            search={location.search}
+            comparisonLabel={comparisonSuffix(overview.data.comparison)}
+          />
         ))}
       </section>
       <section className="overview-charts">

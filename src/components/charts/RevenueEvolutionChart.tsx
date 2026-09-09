@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { useChartColors } from "../../theme/useChartColors";
-import type { AnalyticsFilters, TimeseriesResponse } from "../../types/analytics";
+import type { AnalyticsFilters, ComparisonPeriod, TimeseriesResponse } from "../../types/analytics";
 import { ExportButtons } from "../tables/ExportButtons";
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -20,6 +20,13 @@ const money = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
   maximumFractionDigits: 0,
 });
+
+function comparisonCaption(comparison?: ComparisonPeriod | null) {
+  if (!comparison?.previousFrom || !comparison.previousTo) return null;
+  const [fromYear, fromMonth, fromDay] = comparison.previousFrom.split("-");
+  const [toYear, toMonth, toDay] = comparison.previousTo.split("-");
+  return `Vendas válidas no período, contra ${fromDay}/${fromMonth}/${fromYear} a ${toDay}/${toMonth}/${toYear}.`;
+}
 
 export function RevenueEvolutionChart({
   data,
@@ -56,7 +63,7 @@ export function RevenueEvolutionChart({
         <div className="module-heading">
           <div>
             <h2>Evolução comercial</h2>
-            <p>Faturamento, pedidos e ticket contra o período anterior.</p>
+            <p>Faturamento, pedidos e ticket contra o mesmo recorte do mês anterior.</p>
           </div>
         </div>
         <QueryState loading={false} error={null} empty />
@@ -68,7 +75,10 @@ export function RevenueEvolutionChart({
       <div className="module-heading">
         <div>
           <h2>Evolução de {settings.label.toLocaleLowerCase("pt-BR")}</h2>
-          <p>Vendas válidas no período e comparação com o período anterior.</p>
+          <p>
+            {comparisonCaption(data.comparison) ??
+              "Vendas válidas no período e comparação com o mesmo recorte do mês anterior."}
+          </p>
         </div>
         <div className="table-actions">
           <select

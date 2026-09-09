@@ -46,9 +46,17 @@ export type KpiValue = {
   definition: string;
 };
 
+export type ComparisonPeriod = {
+  currentFrom: string;
+  currentTo: string;
+  previousFrom: string;
+  previousTo: string;
+};
+
 export type OverviewResponse = {
   kpis: Record<string, KpiValue>;
   appliedFilters: AppliedFilters;
+  comparison?: ComparisonPeriod | null;
   metadata: AnalyticsMetadata;
 };
 
@@ -68,6 +76,7 @@ export type TimeseriesResponse = {
   previousItems: TimeseriesPoint[];
   granularity: Granularity;
   appliedFilters: AppliedFilters;
+  comparison?: ComparisonPeriod | null;
   metadata: AnalyticsMetadata;
 };
 
