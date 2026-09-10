@@ -8,7 +8,7 @@ function money(value?: number | null) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function isSafeListingUrl(url?: string | null) {
+function isSafeListingUrl(url?: string | null): url is string {
   if (!url) return false;
   const text = url.trim();
   if (!text || text.includes("...") || text.includes("…")) return false;
