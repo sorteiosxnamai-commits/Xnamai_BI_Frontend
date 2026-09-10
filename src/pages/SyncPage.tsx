@@ -31,6 +31,15 @@ export function SyncPage() {
       ]);
     },
   });
+  const cancel = useMutation({
+    mutationFn: () => api.cancelSync(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["sync-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["sync-runs"] }),
+      ]);
+    },
+  });
   const running = status.data?.some((item) => item.status === "running") || sync.isPending;
 
   return (
@@ -53,9 +62,17 @@ export function SyncPage() {
             <button type="button" disabled={running} onClick={() => sync.mutate("all")}>
               Sincronizar tudo
             </button>
+            <button
+              type="button"
+              disabled={cancel.isPending}
+              onClick={() => cancel.mutate()}
+            >
+              {cancel.isPending ? "Interrompendo…" : "Interromper"}
+            </button>
           </div>
         </div>
         {sync.error && <div className="state-panel error">{sync.error.message}</div>}
+        {cancel.error && <div className="state-panel error">{cancel.error.message}</div>}
         <QueryState
           loading={status.isLoading}
           error={status.error as Error | null}

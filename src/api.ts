@@ -295,6 +295,12 @@ export const api = {
       { method: "POST" },
       2
     ),
+  cancelSync: () =>
+    requestRetry<{ status: string; message?: string; released?: number }>(
+      `/api/v1/sync/cancel`,
+      { method: "POST" },
+      1
+    ),
   syncAndWait: async (
     resource = "all",
     full = false,
