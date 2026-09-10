@@ -39,7 +39,12 @@ export function SyncPage() {
         <div className="module-heading">
           <div>
             <h2>Sincronização Mercos</h2>
-            <p>Execuções incrementais administrativas, sem reinício automático.</p>
+            <p>
+              Execuções incrementais administrativas. Se aparecer 429, espere
+              3–5 minutos e clique só em <strong>Sincronizar pedidos</strong>
+              — não dispare “Sincronizar tudo” de novo enquanto a Mercos
+              estiver limitada.
+            </p>
           </div>
           <div className="table-actions">
             <button type="button" disabled={running} onClick={() => sync.mutate("orders")}>
