@@ -58,10 +58,10 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
           <div>
             <h2>Comparativo de economia do Club</h2>
             <p>
-              Entra na conta só o SKU que já tinha preço pago no recorte anterior
-              e baixou agora. Itens novos do Club, preço de tabela e o restante
-              do pedido ficam de fora do desconto e da porcentagem. Recorte
-              anterior: {periodText}.
+              Entra na conta só o SKU que já tinha preço pago nos 60 dias
+              anteriores ao período atual e baixou agora. Itens novos do Club,
+              preço de tabela e o restante do pedido ficam de fora do desconto e
+              da porcentagem. Preço antigo: {periodText}.
             </p>
           </div>
         </div>
@@ -74,8 +74,8 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
               SKUs
             </small>
             <p>
-              Valor do desconto só nos itens que já existiam antes e ficaram mais
-              baratos. O mix do Club e os itens que não baixaram não entram.
+              Soma de (preço antigo − preço atual) × quantidade, só nos itens que
+              já existiam nos 60 dias anteriores e ficaram mais baratos.
             </p>
           </article>
           <article className="metric-card">
@@ -83,19 +83,22 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
             <strong>{formatPct(summary.matchedSavingsPct)}</strong>
             <small className="positive">sobre o preço anterior desses itens</small>
             <p>
-              Economia ÷ valor que esses mesmos itens teriam custado no recorte
-              anterior.
+              Economia ÷ o que esses mesmos itens teriam custado no preço pago dos
+              60 dias anteriores. O mix novo do Club não entra.
             </p>
           </article>
           <article className="metric-card">
-            <span>Desconto nas compras atuais</span>
-            <strong>{money.format(summary.productSavings)}</strong>
+            <span>Esses itens no preço antigo</span>
+            <strong>
+              {money.format(summary.previousDroppedTotal ?? summary.matchedSavings)}
+            </strong>
             <small className="positive">
-              {formatPct(summary.productSavingsPct)} vs. preço anterior
+              agora {money.format(summary.currentDroppedTotal ?? 0)}
             </small>
             <p>
-              Se os SKUs que baixaram fossem cobrados pelo preço médio de{" "}
-              {periodText}, este é o valor que os clientes deixaram de pagar agora.
+              Se os SKUs que baixaram fossem cobrados pelo preço médio pago em{" "}
+              {periodText}, este seria o valor. A porcentagem do Club é economia ÷
+              este valor.
             </p>
           </article>
           <article className="metric-card">
@@ -106,7 +109,8 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
               atuais com esses SKUs
             </small>
             <p>
-              SKUs cujo preço médio unitário Mercos caiu em relação a {periodText}.
+              Todos os SKUs do período atual cujo preço pago caiu frente aos 60
+              dias anteriores. A lista abaixo traz o conjunto completo.
             </p>
           </article>
         </section>
@@ -117,8 +121,11 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
           <div>
             <h2>Produtos que baixaram de preço</h2>
             <p>
-              Preço médio unitário realizado (valor do item ÷ quantidade) no
-              período atual versus {periodText}.
+              Preço médio unitário pago nos 60 dias anteriores versus o preço
+              atual só das linhas que baixaram.{" "}
+              {summary.droppedProductCount > products.length
+                ? `Exibindo os ${products.length} de ${summary.droppedProductCount.toLocaleString("pt-BR")} com maior economia.`
+                : `Lista completa: ${products.length.toLocaleString("pt-BR")} SKUs.`}
             </p>
           </div>
         </div>
@@ -165,8 +172,8 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
             <h2>Pedidos com itens que baixaram</h2>
             <p>
               Antes e depois consideram só os SKUs do pedido que já tinham preço
-              no recorte anterior e caíram. O restante do pedido não entra na
-              porcentagem.
+              pago nos 60 dias anteriores e caíram. O restante do pedido não entra
+              na porcentagem.
               {summary.matchedPairCount > matchedOrders.length
                 ? ` Exibindo os ${matchedOrders.length} de ${summary.matchedPairCount.toLocaleString("pt-BR")} com maior desconto.`
                 : ""}

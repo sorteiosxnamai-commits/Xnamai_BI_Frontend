@@ -324,6 +324,8 @@ const priceSavingsSchema = z.object({
     matchedPairCount: z.coerce.number(),
     matchedSavings: z.coerce.number(),
     matchedSavingsPct: z.number().nullable(),
+    previousDroppedTotal: z.coerce.number().optional(),
+    currentDroppedTotal: z.coerce.number().optional(),
     customersWithSavings: z.coerce.number(),
   }),
   products: z.array(

@@ -437,6 +437,8 @@ export type PriceSavingsResponse = {
     matchedPairCount: number;
     matchedSavings: number;
     matchedSavingsPct: number | null;
+    previousDroppedTotal?: number;
+    currentDroppedTotal?: number;
     customersWithSavings: number;
   };
   products: PriceSavingsProduct[];
