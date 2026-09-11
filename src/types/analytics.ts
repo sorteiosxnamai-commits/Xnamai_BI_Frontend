@@ -389,6 +389,67 @@ export type AssociationsResponse = {
   metadata: AnalyticsMetadata;
 };
 
+export type PriceSavingsProduct = {
+  id: string;
+  code: string | null;
+  name: string;
+  previousAverageUnit: number;
+  currentAverageUnit: number;
+  unitDrop: number;
+  dropPct: number | null;
+  quantitySold: number;
+  currentRevenue: number;
+  savings: number;
+  currentOrders: number;
+  previousOrders: number;
+};
+
+export type PriceSavingsMatchedOrder = {
+  customerId: string;
+  customerName: string;
+  currentOrderId: string;
+  currentNumber: string;
+  currentIssuedAt: string | null;
+  currentTotal: number;
+  previousOrderId: string;
+  previousNumber: string;
+  previousIssuedAt: string | null;
+  previousTotal: number;
+  savings: number;
+  savingsPct: number | null;
+  itemSavings: number;
+  skuCount: number;
+};
+
+export type PriceSavingsCustomer = {
+  id: string;
+  name: string;
+  matchedOrders: number;
+  previousTotal: number;
+  currentTotal: number;
+  savings: number;
+  savingsPct: number | null;
+};
+
+export type PriceSavingsResponse = {
+  summary: {
+    droppedProductCount: number;
+    currentOrdersWithDroppedProducts: number;
+    productSavings: number;
+    productSavingsPct: number | null;
+    matchedPairCount: number;
+    matchedSavings: number;
+    matchedSavingsPct: number | null;
+    customersWithSavings: number;
+  };
+  products: PriceSavingsProduct[];
+  matchedOrders: PriceSavingsMatchedOrder[];
+  customers: PriceSavingsCustomer[];
+  comparison?: ComparisonPeriod | null;
+  appliedFilters: AppliedFilters;
+  metadata: AnalyticsMetadata;
+};
+
 export type FilterOption = { id: string; label: string };
 export type FilterOptionsResponse = {
   items: FilterOption[];

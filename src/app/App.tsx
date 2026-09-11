@@ -45,6 +45,11 @@ const InventoryPage = lazyPage(() =>
 const InsightsPage = lazyPage(() =>
   import("../pages/InsightsPage").then((module) => ({ default: module.InsightsPage }))
 );
+const CustomViewsPage = lazyPage(() =>
+  import("../pages/CustomViewsPage").then((module) => ({
+    default: module.CustomViewsPage,
+  }))
+);
 const SyncPage = lazyPage(() =>
   import("../pages/SyncPage").then((module) => ({ default: module.SyncPage }))
 );
@@ -62,6 +67,7 @@ const navigation: {
   { path: "/sellers", label: "Vendedores", icon: "♙" },
   { path: "/inventory", label: "Estoque", icon: "▤" },
   { path: "/insights", label: "Geografia e coortes", icon: "◫" },
+  { path: "/custom-views", label: "Visões personalizadas", icon: "✧" },
   { path: "/data-quality", label: "Qualidade dos dados", icon: "✓", adminOnly: true },
   { path: "/sync", label: "Sincronização", icon: "↻", adminOnly: true },
 ];
@@ -114,6 +120,7 @@ function BiApp() {
     "/sellers",
     "/inventory",
     "/insights",
+    "/custom-views",
   ].includes(location.pathname);
   const periodLabel =
     filters.dateFrom || filters.dateTo
@@ -224,6 +231,10 @@ function BiApp() {
               <Route path="/sellers" element={<SellersPage filters={filters} />} />
               <Route path="/inventory" element={<InventoryPage filters={filters} />} />
               <Route path="/insights" element={<InsightsPage filters={filters} />} />
+              <Route
+                path="/custom-views"
+                element={<CustomViewsPage filters={filters} />}
+              />
               <Route
                 path="/data-quality"
                 element={

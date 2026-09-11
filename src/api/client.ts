@@ -13,6 +13,7 @@ import type {
   OrderDetailResponse,
   OverviewResponse,
   PageResponse,
+  PriceSavingsResponse,
   ProductAnalyticsRow,
   ProductDetailResponse,
   ProductInsightsResponse,
@@ -314,6 +315,67 @@ const associationsSchema = z.object({
   metadata: metadataSchema,
 });
 
+const priceSavingsSchema = z.object({
+  summary: z.object({
+    droppedProductCount: z.coerce.number(),
+    currentOrdersWithDroppedProducts: z.coerce.number(),
+    productSavings: z.coerce.number(),
+    productSavingsPct: z.number().nullable(),
+    matchedPairCount: z.coerce.number(),
+    matchedSavings: z.coerce.number(),
+    matchedSavingsPct: z.number().nullable(),
+    customersWithSavings: z.coerce.number(),
+  }),
+  products: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string().nullable(),
+      name: z.string(),
+      previousAverageUnit: z.coerce.number(),
+      currentAverageUnit: z.coerce.number(),
+      unitDrop: z.coerce.number(),
+      dropPct: z.number().nullable(),
+      quantitySold: z.coerce.number(),
+      currentRevenue: z.coerce.number(),
+      savings: z.coerce.number(),
+      currentOrders: z.coerce.number(),
+      previousOrders: z.coerce.number(),
+    })
+  ),
+  matchedOrders: z.array(
+    z.object({
+      customerId: z.string(),
+      customerName: z.string(),
+      currentOrderId: z.string(),
+      currentNumber: z.string(),
+      currentIssuedAt: z.string().nullable(),
+      currentTotal: z.coerce.number(),
+      previousOrderId: z.string(),
+      previousNumber: z.string(),
+      previousIssuedAt: z.string().nullable(),
+      previousTotal: z.coerce.number(),
+      savings: z.coerce.number(),
+      savingsPct: z.number().nullable(),
+      itemSavings: z.coerce.number(),
+      skuCount: z.coerce.number(),
+    })
+  ),
+  customers: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      matchedOrders: z.coerce.number(),
+      previousTotal: z.coerce.number(),
+      currentTotal: z.coerce.number(),
+      savings: z.coerce.number(),
+      savingsPct: z.number().nullable(),
+    })
+  ),
+  comparison: comparisonSchema,
+  appliedFilters: z.record(z.string(), z.unknown()),
+  metadata: metadataSchema,
+});
+
 function paramsFromFilters(filters: AnalyticsFilters): URLSearchParams {
   const params = new URLSearchParams({
     period: filters.period,
@@ -579,6 +641,12 @@ export const analyticsApi = {
       `/api/v1/analytics/associations?${paramsFromFilters(filters)}`,
       associationsSchema
     ) as Promise<AssociationsResponse>;
+  },
+  priceSavings(filters: AnalyticsFilters): Promise<PriceSavingsResponse> {
+    return request(
+      `/api/v1/analytics/custom-views/price-savings?${paramsFromFilters(filters)}`,
+      priceSavingsSchema
+    ) as Promise<PriceSavingsResponse>;
   },
   filterOptions(
     option: string,
