@@ -426,6 +426,45 @@ export type PriceSavingsCustomer = {
   currentTotal: number;
   savings: number;
   savingsPct: number | null;
+  rank?: number;
+};
+
+export type PriceSavingsTier = {
+  key: string;
+  label: string;
+  rankFrom: number;
+  rankTo: number;
+  count: number;
+  orderCount: number;
+  previousTotal: number;
+  currentTotal: number;
+  savings: number;
+  savingsPct: number | null;
+  savingsSharePct: number | null;
+  avgDropPct: number | null;
+  truncated?: boolean;
+  members: PriceSavingsCustomer[];
+};
+
+export type PriceSavingsBucket = {
+  bucket: string;
+  skuCount: number;
+  quantity: number;
+  savings: number;
+  dropPct: number | null;
+  savingsSharePct: number | null;
+};
+
+export type PriceSavingsWeek = {
+  week: string;
+  from: string;
+  to: string;
+  previousTotal: number;
+  currentTotal: number;
+  savings: number;
+  dropPct: number | null;
+  orders: number;
+  skuCount: number;
 };
 
 export type PriceSavingsResponse = {
@@ -440,10 +479,35 @@ export type PriceSavingsResponse = {
     previousDroppedTotal?: number;
     currentDroppedTotal?: number;
     customersWithSavings: number;
+    currentWindowDays?: number;
+    previousWindowDays?: number;
+    simpleAvgDropPct?: number | null;
+    medianDropPct?: number | null;
+    qtyWeightedDropPct?: number | null;
+    valueWeightedDropPct?: number | null;
+    customerAvgDropPct?: number | null;
+    customerMedianDropPct?: number | null;
+    currentRevenue?: number;
+    currentOrderCount?: number;
+    droppedSkuRevenue?: number;
+    unchangedSkuRevenue?: number;
+    newSkuRevenue?: number;
+    droppedSkuRevenueSharePct?: number | null;
+    billImpactPct?: number | null;
+    top10CustomerSavingsSharePct?: number | null;
+    top20CustomerSavingsSharePct?: number | null;
+    top50CustomerSavingsSharePct?: number | null;
+    top10ProductSavingsSharePct?: number | null;
+    top20ProductSavingsSharePct?: number | null;
+    top50ProductSavingsSharePct?: number | null;
   };
   products: PriceSavingsProduct[];
   matchedOrders: PriceSavingsMatchedOrder[];
   customers: PriceSavingsCustomer[];
+  customerTiers?: PriceSavingsTier[];
+  productTiers?: PriceSavingsTier[];
+  dropBuckets?: PriceSavingsBucket[];
+  weekly?: PriceSavingsWeek[];
   comparison?: ComparisonPeriod | null;
   appliedFilters: AppliedFilters;
   metadata: AnalyticsMetadata;

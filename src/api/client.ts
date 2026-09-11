@@ -315,6 +315,34 @@ const associationsSchema = z.object({
   metadata: metadataSchema,
 });
 
+const priceSavingsCustomerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  matchedOrders: z.coerce.number(),
+  previousTotal: z.coerce.number(),
+  currentTotal: z.coerce.number(),
+  savings: z.coerce.number(),
+  savingsPct: z.number().nullable(),
+  rank: z.coerce.number().optional(),
+});
+
+const priceSavingsTierSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  rankFrom: z.coerce.number(),
+  rankTo: z.coerce.number(),
+  count: z.coerce.number(),
+  orderCount: z.coerce.number(),
+  previousTotal: z.coerce.number(),
+  currentTotal: z.coerce.number(),
+  savings: z.coerce.number(),
+  savingsPct: z.number().nullable(),
+  savingsSharePct: z.number().nullable(),
+  avgDropPct: z.number().nullable(),
+  truncated: z.boolean().optional(),
+  members: z.array(priceSavingsCustomerSchema),
+});
+
 const priceSavingsSchema = z.object({
   summary: z.object({
     droppedProductCount: z.coerce.number(),
@@ -327,6 +355,27 @@ const priceSavingsSchema = z.object({
     previousDroppedTotal: z.coerce.number().optional(),
     currentDroppedTotal: z.coerce.number().optional(),
     customersWithSavings: z.coerce.number(),
+    currentWindowDays: z.coerce.number().optional(),
+    previousWindowDays: z.coerce.number().optional(),
+    simpleAvgDropPct: z.number().nullable().optional(),
+    medianDropPct: z.number().nullable().optional(),
+    qtyWeightedDropPct: z.number().nullable().optional(),
+    valueWeightedDropPct: z.number().nullable().optional(),
+    customerAvgDropPct: z.number().nullable().optional(),
+    customerMedianDropPct: z.number().nullable().optional(),
+    currentRevenue: z.coerce.number().optional(),
+    currentOrderCount: z.coerce.number().optional(),
+    droppedSkuRevenue: z.coerce.number().optional(),
+    unchangedSkuRevenue: z.coerce.number().optional(),
+    newSkuRevenue: z.coerce.number().optional(),
+    droppedSkuRevenueSharePct: z.number().nullable().optional(),
+    billImpactPct: z.number().nullable().optional(),
+    top10CustomerSavingsSharePct: z.number().nullable().optional(),
+    top20CustomerSavingsSharePct: z.number().nullable().optional(),
+    top50CustomerSavingsSharePct: z.number().nullable().optional(),
+    top10ProductSavingsSharePct: z.number().nullable().optional(),
+    top20ProductSavingsSharePct: z.number().nullable().optional(),
+    top50ProductSavingsSharePct: z.number().nullable().optional(),
   }),
   products: z.array(
     z.object({
@@ -359,17 +408,36 @@ const priceSavingsSchema = z.object({
       skuCount: z.coerce.number(),
     })
   ),
-  customers: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      matchedOrders: z.coerce.number(),
-      previousTotal: z.coerce.number(),
-      currentTotal: z.coerce.number(),
-      savings: z.coerce.number(),
-      savingsPct: z.number().nullable(),
-    })
-  ),
+  customers: z.array(priceSavingsCustomerSchema),
+  customerTiers: z.array(priceSavingsTierSchema).optional(),
+  productTiers: z.array(priceSavingsTierSchema).optional(),
+  dropBuckets: z
+    .array(
+      z.object({
+        bucket: z.string(),
+        skuCount: z.coerce.number(),
+        quantity: z.coerce.number(),
+        savings: z.coerce.number(),
+        dropPct: z.number().nullable(),
+        savingsSharePct: z.number().nullable(),
+      })
+    )
+    .optional(),
+  weekly: z
+    .array(
+      z.object({
+        week: z.string(),
+        from: z.string(),
+        to: z.string(),
+        previousTotal: z.coerce.number(),
+        currentTotal: z.coerce.number(),
+        savings: z.coerce.number(),
+        dropPct: z.number().nullable(),
+        orders: z.coerce.number(),
+        skuCount: z.coerce.number(),
+      })
+    )
+    .optional(),
   comparison: comparisonSchema,
   appliedFilters: z.record(z.string(), z.unknown()),
   metadata: metadataSchema,
