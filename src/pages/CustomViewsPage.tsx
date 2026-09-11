@@ -56,42 +56,46 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
       <article className="module-card">
         <div className="module-heading">
           <div>
-            <h2>Comparativo de economia</h2>
+            <h2>Comparativo de economia do Club</h2>
             <p>
-              Destaca produtos que baixaram de preço e pedidos do mesmo cliente com o
-              mesmo mix de itens, comparando o período atual com {periodText}. Os
-              valores usam totais Mercos (pedido e item), não preço de tabela.
+              Mostra o que o cliente pagaria antes do Club e o que pagou depois,
+              em qualquer pedido do período com item descontado. Não é necessário
+              repetir o mesmo mix. A queda de preço dos SKUs usa o recorte{" "}
+              {periodText}.
             </p>
           </div>
         </div>
         <section className="metric-grid">
           <article className="metric-card">
-            <span>Economia nos mesmos pedidos</span>
+            <span>Economia nos pedidos com desconto</span>
             <strong>{money.format(summary.matchedSavings)}</strong>
             <small className="positive">
-              {summary.matchedPairCount.toLocaleString("pt-BR")} pares com o mesmo mix
+              {summary.matchedPairCount.toLocaleString("pt-BR")} pedidos com itens
+              descontados
             </small>
             <p>
-              Diferença entre o total Mercos anterior e o atual quando o cliente
-              repetiu exatamente os mesmos itens e quantidades.
+              Diferença entre o valor antes do Club (preço anterior ou de tabela)
+              e o total Mercos pago no período atual.
             </p>
           </article>
           <article className="metric-card">
-            <span>Economia média nos mesmos pedidos</span>
+            <span>Economia média do Club</span>
             <strong>{formatPct(summary.matchedSavingsPct)}</strong>
-            <small className="positive">vs. o valor pago antes</small>
+            <small className="positive">vs. o valor antes do Club</small>
             <p>
-              Percentual economizado sobre o total dos pedidos anteriores
-              pareados.
+              Percentual economizado sobre o valor que esses pedidos teriam
+              custado antes do Club.
             </p>
           </article>
           <article className="metric-card">
             <span>Economia nas compras atuais</span>
             <strong>{money.format(summary.productSavings)}</strong>
-            <small className="positive">{formatPct(summary.productSavingsPct)} vs. preço anterior</small>
+            <small className="positive">
+              {formatPct(summary.productSavingsPct)} vs. preço anterior
+            </small>
             <p>
-              Se os SKUs que baixaram fossem cobrados pelo preço médio do período
-              anterior, este é o valor que os clientes deixaram de pagar agora.
+              Se os SKUs que baixaram fossem cobrados pelo preço médio de{" "}
+              {periodText}, este é o valor que os clientes deixaram de pagar agora.
             </p>
           </article>
           <article className="metric-card">
@@ -114,7 +118,7 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
             <h2>Produtos que baixaram de preço</h2>
             <p>
               Preço médio unitário realizado (valor do item ÷ quantidade) no
-              período atual versus o recorte anterior.
+              período atual versus {periodText}.
             </p>
           </div>
         </div>
@@ -158,11 +162,14 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
       <article className="module-card table-module">
         <div className="module-heading">
           <div>
-            <h2>Pedidos com os mesmos itens</h2>
+            <h2>Pedidos antes e depois do Club</h2>
             <p>
-              Um pedido atual pareado com o pedido anterior do mesmo cliente
-              quando o mix (SKU + quantidade) é idêntico e o total agora ficou
-              menor.
+              Pedidos do período atual com pelo menos um item descontado. Antes
+              do Club usa o preço médio anterior do SKU ou o preço de tabela;
+              depois do Club é o total Mercos pago.
+              {summary.matchedPairCount > matchedOrders.length
+                ? ` Exibindo os ${matchedOrders.length} de ${summary.matchedPairCount.toLocaleString("pt-BR")} com maior economia.`
+                : ""}
             </p>
           </div>
         </div>
@@ -174,29 +181,25 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Pedido anterior</th>
-                  <th>Total anterior</th>
-                  <th>Pedido atual</th>
-                  <th>Total atual</th>
+                  <th>Pedido</th>
+                  <th>Itens com desconto</th>
+                  <th>Antes do Club</th>
+                  <th>Depois do Club</th>
                   <th>Economia</th>
                   <th>%</th>
                 </tr>
               </thead>
               <tbody>
                 {matchedOrders.map((row) => (
-                  <tr key={`${row.previousOrderId}-${row.currentOrderId}`}>
+                  <tr key={row.currentOrderId}>
                     <td>{row.customerName}</td>
-                    <td>
-                      {row.previousNumber}
-                      <br />
-                      <small>{formatDateTime(row.previousIssuedAt)}</small>
-                    </td>
-                    <td>{money.format(row.previousTotal)}</td>
                     <td>
                       {row.currentNumber}
                       <br />
                       <small>{formatDateTime(row.currentIssuedAt)}</small>
                     </td>
+                    <td>{row.skuCount.toLocaleString("pt-BR")}</td>
+                    <td>{money.format(row.previousTotal)}</td>
                     <td>{money.format(row.currentTotal)}</td>
                     <td>{money.format(row.savings)}</td>
                     <td>{formatPct(row.savingsPct)}</td>
@@ -212,7 +215,10 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
         <div className="module-heading">
           <div>
             <h2>Clientes que mais economizaram</h2>
-            <p>Soma da economia nos pares de pedidos com o mesmo mix de itens.</p>
+            <p>
+              Soma da economia Club nos pedidos do período, mesmo quando o mix de
+              itens não se repetiu.
+            </p>
           </div>
         </div>
         {customers.length === 0 ? (
@@ -223,9 +229,9 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Pares</th>
-                  <th>Total anterior</th>
-                  <th>Total atual</th>
+                  <th>Pedidos</th>
+                  <th>Antes do Club</th>
+                  <th>Depois do Club</th>
                   <th>Economia</th>
                   <th>%</th>
                 </tr>

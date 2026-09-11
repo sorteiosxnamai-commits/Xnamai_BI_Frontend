@@ -411,9 +411,6 @@ export type PriceSavingsMatchedOrder = {
   currentNumber: string;
   currentIssuedAt: string | null;
   currentTotal: number;
-  previousOrderId: string;
-  previousNumber: string;
-  previousIssuedAt: string | null;
   previousTotal: number;
   savings: number;
   savingsPct: number | null;
