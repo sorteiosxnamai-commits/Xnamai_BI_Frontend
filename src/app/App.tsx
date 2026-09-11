@@ -120,7 +120,6 @@ function BiApp() {
     "/sellers",
     "/inventory",
     "/insights",
-    "/custom-views",
   ].includes(location.pathname);
   const periodLabel =
     filters.dateFrom || filters.dateTo
@@ -231,10 +230,7 @@ function BiApp() {
               <Route path="/sellers" element={<SellersPage filters={filters} />} />
               <Route path="/inventory" element={<InventoryPage filters={filters} />} />
               <Route path="/insights" element={<InsightsPage filters={filters} />} />
-              <Route
-                path="/custom-views"
-                element={<CustomViewsPage filters={filters} />}
-              />
+              <Route path="/custom-views" element={<CustomViewsPage />} />
               <Route
                 path="/data-quality"
                 element={

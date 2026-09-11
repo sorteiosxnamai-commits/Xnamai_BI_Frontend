@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { analyticsApi } from "../api/client";
 import { MetadataStatus, QueryState } from "../components/feedback/QueryState";
-import type { AnalyticsFilters, ComparisonPeriod } from "../types/analytics";
+import type { ComparisonPeriod } from "../types/analytics";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -31,10 +31,10 @@ function formatPct(value: number | null | undefined) {
   return `${number.format(value)}%`;
 }
 
-export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
+export function CustomViewsPage() {
   const query = useQuery({
-    queryKey: ["analytics", "price-savings", filters],
-    queryFn: () => analyticsApi.priceSavings(filters),
+    queryKey: ["analytics", "price-savings", "club"],
+    queryFn: () => analyticsApi.priceSavings(),
   });
 
   if (query.isError || !query.data) {
@@ -58,10 +58,15 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
           <div>
             <h2>Comparativo de economia do Club</h2>
             <p>
-              Entra na conta só o SKU que já tinha preço pago nos 60 dias
-              anteriores ao período atual e baixou agora. Itens novos do Club,
-              preço de tabela e o restante do pedido ficam de fora do desconto e
-              da porcentagem. Preço antigo: {periodText}.
+              Análise fixa, sem filtro global: pedidos dos últimos 60 dias versus
+              o preço pago nos 60 dias anteriores. Entra só o SKU que já era
+              vendido antes e baixou agora. Itens novos do Club, preço de tabela e
+              o restante do pedido ficam de fora. Preço antigo: {periodText}.
+              Pedidos atuais:{" "}
+              {comparison?.currentFrom && comparison?.currentTo
+                ? `${formatBrDate(comparison.currentFrom)} a ${formatBrDate(comparison.currentTo)}`
+                : "últimos 60 dias"}
+              .
             </p>
           </div>
         </div>

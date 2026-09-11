@@ -641,9 +641,9 @@ export const analyticsApi = {
       associationsSchema
     ) as Promise<AssociationsResponse>;
   },
-  priceSavings(filters: AnalyticsFilters): Promise<PriceSavingsResponse> {
+  priceSavings(): Promise<PriceSavingsResponse> {
     return request(
-      `/api/v1/analytics/custom-views/price-savings?${paramsFromFilters(filters)}`,
+      "/api/v1/analytics/custom-views/price-savings",
       priceSavingsSchema
     ) as Promise<PriceSavingsResponse>;
   },
