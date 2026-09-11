@@ -36,7 +36,7 @@ export function MetadataStatus({ metadata }: { metadata: AnalyticsMetadata }) {
       <span>
         Gerado em {new Date(metadata.generatedAt).toLocaleString("pt-BR")}
         {metadata.dataThrough &&
-          ` · dados até ${new Date(metadata.dataThrough).toLocaleString("pt-BR")}`}
+          ` · sincronizado até ${new Date(metadata.dataThrough).toLocaleString("pt-BR")}`}
       </span>
       {metadata.quality.ordersWithItemsPct != null && (
         <span>

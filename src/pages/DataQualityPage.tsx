@@ -99,7 +99,7 @@ export function DataQualityPage({ data, loading, error, onRetry }: Props) {
           <small>CONFIABILIDADE DA BASE</small>
           <h2>{data.metadata.isPartial ? "Dados parciais" : "Cobertura adequada"}</h2>
           <p>
-            Gerado em {new Date(data.metadata.generatedAt).toLocaleString("pt-BR")} · dados até{" "}
+            Gerado em {new Date(data.metadata.generatedAt).toLocaleString("pt-BR")} · sincronizado até{" "}
             {data.metadata.dataThrough
               ? new Date(data.metadata.dataThrough).toLocaleString("pt-BR")
               : "sem pedidos"}

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { QueryState } from "./QueryState";
+import { MetadataStatus, QueryState } from "./QueryState";
 
 test("renders loading, empty and retryable error states explicitly", () => {
   const { rerender } = render(<QueryState loading error={null} />);
@@ -20,4 +20,19 @@ test("renders loading, empty and retryable error states explicitly", () => {
   expect(screen.getByText("API indisponível")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
   expect(retry).toHaveBeenCalledOnce();
+});
+
+test("shows last successful sync time instead of last emission date wording", () => {
+  render(
+    <MetadataStatus
+      metadata={{
+        generatedAt: "2026-09-11T17:00:00.000Z",
+        dataThrough: "2026-09-11T17:00:00.000Z",
+        isPartial: false,
+        warnings: [],
+        quality: { ordersWithItemsPct: 100 },
+      }}
+    />
+  );
+  expect(screen.getByText(/sincronizado até/)).toBeInTheDocument();
 });
