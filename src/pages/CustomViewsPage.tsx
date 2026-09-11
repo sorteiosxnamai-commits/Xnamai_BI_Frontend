@@ -59,9 +59,9 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
             <h2>Comparativo de economia do Club</h2>
             <p>
               Mostra o que o cliente pagaria antes do Club e o que pagou depois,
-              em qualquer pedido do período com item descontado. Não é necessário
-              repetir o mesmo mix. A queda de preço dos SKUs usa o recorte{" "}
-              {periodText}.
+              só com preços Mercos realizados. Preço de tabela placeholder (R$
+              1.000) e quedas irreais não entram na conta. A queda de SKU usa o
+              recorte {periodText}.
             </p>
           </div>
         </div>
@@ -74,8 +74,8 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
               descontados
             </small>
             <p>
-              Diferença entre o valor antes do Club (preço anterior ou de tabela)
-              e o total Mercos pago no período atual.
+              Diferença entre o valor Mercos antes do Club e o total pago no
+              período atual, sem usar preço de tabela fictício.
             </p>
           </article>
           <article className="metric-card">
@@ -164,9 +164,10 @@ export function CustomViewsPage({ filters }: { filters: AnalyticsFilters }) {
           <div>
             <h2>Pedidos antes e depois do Club</h2>
             <p>
-              Pedidos do período atual com pelo menos um item descontado. Antes
-              do Club usa o preço médio anterior do SKU ou o preço de tabela;
-              depois do Club é o total Mercos pago.
+              Pedidos do período atual em que o SKU ficou mais barato no Mercos.
+              Antes do Club é o preço médio pago no recorte anterior; depois do
+              Club é o total Mercos pago. Tabela de R$ 1.000 e descontos acima de
+              40% são ignorados.
               {summary.matchedPairCount > matchedOrders.length
                 ? ` Exibindo os ${matchedOrders.length} de ${summary.matchedPairCount.toLocaleString("pt-BR")} com maior economia.`
                 : ""}
