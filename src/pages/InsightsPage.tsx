@@ -28,10 +28,6 @@ export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
     queryKey: ["analytics", "geography", filters],
     queryFn: () => analyticsApi.geography(filters),
   });
-  const cohorts = useQuery({
-    queryKey: ["analytics", "cohorts", filters],
-    queryFn: () => analyticsApi.cohorts(filters),
-  });
   const associations = useQuery({
     queryKey: ["analytics", "associations", filters],
     queryFn: () => analyticsApi.associations(filters),
@@ -40,18 +36,6 @@ export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
     queryKey: ["analytics", "rankings", filters],
     queryFn: () => analyticsApi.rankings(filters),
   });
-  const cohortRows = cohorts.data?.cohorts || [];
-  const maxOffset = Math.max(
-    0,
-    ...cohortRows.flatMap((cohort) =>
-      cohort.retention.map((cell) => cell.monthOffset)
-    )
-  );
-  const monthOffsets = Array.from({ length: maxOffset + 1 }, (_, offset) => ({
-    offset,
-    key: `month-${offset}`,
-  }));
-
   return (
     <div className="page-stack">
       {geography.data && !geography.isError && (
@@ -113,61 +97,6 @@ export function InsightsPage({ filters }: { filters: AnalyticsFilters }) {
           loading={geography.isLoading}
           error={geography.error as Error | null}
           onRetry={() => void geography.refetch()}
-        />
-      )}
-
-      {cohorts.data && !cohorts.isError ? (
-      <article className="module-card">
-        <div className="module-heading">
-          <div>
-            <h2>Coortes de recompra</h2>
-            <p>Retenção por mês desde a primeira venda válida de cada cliente.</p>
-          </div>
-          <ExportButtons report="customers" filters={filters} />
-        </div>
-        <div className="data-table-wrap">
-          <table className="data-table cohort-table">
-            <thead>
-              <tr>
-                <th>Coorte</th>
-                <th>Clientes</th>
-                {monthOffsets.map((month) => (
-                  <th key={month.key}>M+{month.offset}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cohortRows.map((cohort) => (
-                <tr key={cohort.cohort}>
-                  <td>{cohort.cohort}</td>
-                  <td>{cohort.size}</td>
-                  {monthOffsets.map((month) => {
-                    const cell = cohort.retention.find(
-                      (retention) => retention.monthOffset === month.offset
-                    );
-                    const rate = cell?.rate || 0;
-                    return (
-                      <td
-                        key={`${cohort.cohort}-${month.key}`}
-                        style={{
-                          backgroundColor: `color-mix(in srgb, var(--chart-1) ${Math.min(rate, 72)}%, transparent)`,
-                        }}
-                      >
-                        {rate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
-      ) : (
-        <QueryState
-          loading={cohorts.isLoading}
-          error={cohorts.error as Error | null}
-          onRetry={() => void cohorts.refetch()}
         />
       )}
 

@@ -36,6 +36,9 @@ const ProductsPage = lazyPage(() =>
 const CustomersPage = lazyPage(() =>
   import("../pages/CustomersPage").then((module) => ({ default: module.CustomersPage }))
 );
+const RetentionPage = lazyPage(() =>
+  import("../pages/RetentionPage").then((module) => ({ default: module.RetentionPage }))
+);
 const SellersPage = lazyPage(() =>
   import("../pages/SellersPage").then((module) => ({ default: module.SellersPage }))
 );
@@ -64,9 +67,10 @@ const navigation: {
   { path: "/orders", label: "Pedidos", icon: "▣" },
   { path: "/products", label: "Produtos", icon: "◇" },
   { path: "/customers", label: "Clientes", icon: "◎" },
+  { path: "/retention", label: "Retenção e LTV", icon: "↗" },
   { path: "/sellers", label: "Vendedores", icon: "♙" },
   { path: "/inventory", label: "Estoque", icon: "▤" },
-  { path: "/insights", label: "Geografia e coortes", icon: "◫" },
+  { path: "/insights", label: "Geografia e mix", icon: "◫" },
   { path: "/custom-views", label: "Visões personalizadas", icon: "✧" },
   { path: "/data-quality", label: "Qualidade dos dados", icon: "✓", adminOnly: true },
   { path: "/sync", label: "Sincronização", icon: "↻", adminOnly: true },
@@ -117,6 +121,7 @@ function BiApp() {
     "/orders",
     "/products",
     "/customers",
+    "/retention",
     "/sellers",
     "/inventory",
     "/insights",
@@ -222,6 +227,22 @@ function BiApp() {
                         excludedCustomerIds: filters.excludedCustomerIds.filter(
                           (value) => value !== id,
                         ),
+                      })
+                    }
+                  />
+                }
+              />
+              <Route
+                path="/retention"
+                element={
+                  <RetentionPage
+                    filters={filters}
+                    onUseAllHistory={() =>
+                      updateFilters({
+                        period: "all",
+                        dateFrom: undefined,
+                        dateTo: undefined,
+                        granularity: "month",
                       })
                     }
                   />

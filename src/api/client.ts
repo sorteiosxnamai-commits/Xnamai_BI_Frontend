@@ -682,15 +682,48 @@ export const analyticsApi = {
   },
   cohorts(filters: AnalyticsFilters): Promise<CohortsResponse> {
     const schema = z.object({
+      summary: z.object({
+        customers: z.number(),
+        repeatCustomers: z.number(),
+        repeatRate: z.coerce.number(),
+        month1RetainedCustomers: z.number(),
+        month1EligibleCustomers: z.number(),
+        month1RetentionRate: z.coerce.number().nullable(),
+        totalRevenue: z.coerce.number(),
+        realizedLtv: z.coerce.number(),
+      }),
+      retentionCurve: z.array(
+        z.object({
+          monthOffset: z.number(),
+          retentionRate: z.coerce.number(),
+          activeCustomers: z.number(),
+          eligibleCustomers: z.number(),
+          cohortCount: z.number(),
+        })
+      ),
+      ltvCurve: z.array(
+        z.object({
+          monthOffset: z.number(),
+          ltv: z.coerce.number(),
+          cumulativeRevenue: z.coerce.number(),
+          eligibleCustomers: z.number(),
+          cohortCount: z.number(),
+        })
+      ),
       cohorts: z.array(
         z.object({
           cohort: z.string(),
           size: z.number(),
+          totalRevenue: z.coerce.number(),
+          realizedLtv: z.coerce.number(),
           retention: z.array(
             z.object({
               monthOffset: z.number(),
               customers: z.number(),
-              rate: z.number(),
+              rate: z.coerce.number(),
+              revenue: z.coerce.number(),
+              cumulativeRevenue: z.coerce.number(),
+              cumulativeLtv: z.coerce.number(),
             })
           ),
         })

@@ -366,15 +366,45 @@ export type GeographyResponse = {
 };
 
 export type CohortsResponse = {
+  summary: {
+    customers: number;
+    repeatCustomers: number;
+    repeatRate: number;
+    month1RetainedCustomers: number;
+    month1EligibleCustomers: number;
+    month1RetentionRate: number | null;
+    totalRevenue: number;
+    realizedLtv: number;
+  };
+  retentionCurve: {
+    monthOffset: number;
+    retentionRate: number;
+    activeCustomers: number;
+    eligibleCustomers: number;
+    cohortCount: number;
+  }[];
+  ltvCurve: {
+    monthOffset: number;
+    ltv: number;
+    cumulativeRevenue: number;
+    eligibleCustomers: number;
+    cohortCount: number;
+  }[];
   cohorts: {
     cohort: string;
     size: number;
+    totalRevenue: number;
+    realizedLtv: number;
     retention: {
       monthOffset: number;
       customers: number;
       rate: number;
+      revenue: number;
+      cumulativeRevenue: number;
+      cumulativeLtv: number;
     }[];
   }[];
+  appliedFilters: AppliedFilters;
   metadata: AnalyticsMetadata;
 };
 
