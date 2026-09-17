@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { analyticsApi } from "../api/client";
 import { BuyerCompositionChart } from "../components/charts/BuyerCompositionChart";
 import { CommercialBreakdownCharts } from "../components/charts/CommercialBreakdownCharts";
+import { CustomerAbcChart } from "../components/charts/CustomerAbcChart";
 import { RevenueEvolutionChart } from "../components/charts/RevenueEvolutionChart";
 import { MetadataStatus, QueryState } from "../components/feedback/QueryState";
 import type { AnalyticsFilters, ComparisonPeriod, KpiValue } from "../types/analytics";
@@ -156,7 +157,10 @@ export function OverviewPage({ filters }: { filters: AnalyticsFilters }) {
         <BuyerCompositionChart data={overview.data} filters={filters} />
       </section>
       {breakdowns.data && !breakdowns.isError ? (
-        <CommercialBreakdownCharts data={breakdowns.data} filters={filters} />
+        <>
+          <CustomerAbcChart data={breakdowns.data.customerAbc} filters={filters} />
+          <CommercialBreakdownCharts data={breakdowns.data} filters={filters} />
+        </>
       ) : (
         <QueryState
           loading={breakdowns.isLoading}
