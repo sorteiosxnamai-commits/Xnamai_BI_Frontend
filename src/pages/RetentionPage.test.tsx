@@ -82,10 +82,14 @@ test("shows retention KPIs, LTV charts and the cohort heatmap", async () => {
     </QueryClientProvider>
   );
 
-  expect(await screen.findByText("LTV observado")).toBeInTheDocument();
+  expect(await screen.findAllByText("LTV médio observado")).toHaveLength(2);
   expect(screen.getByText("R$ 167")).toBeInTheDocument();
   expect(screen.getByText("Retenção no M+1")).toBeInTheDocument();
-  expect(screen.getByText("Evolução do LTV")).toBeInTheDocument();
+  expect(screen.getByText("Como ler esta análise")).toBeInTheDocument();
+  expect(screen.getByText("R$ 500 ÷ 3 clientes")).toBeInTheDocument();
+  expect(screen.getByText("Como o LTV cresce de M+0 a M+1")).toBeInTheDocument();
+  expect(screen.getByText("Retenção mês a mês")).toBeInTheDocument();
+  expect(screen.getByText("LTV acumulado até M+1, por coorte")).toBeInTheDocument();
   expect(screen.getByText("Mapa de coortes")).toBeInTheDocument();
   expect(screen.getByText("50%")).toBeInTheDocument();
 
