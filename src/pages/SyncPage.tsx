@@ -6,21 +6,39 @@ import { QueryState } from "../components/feedback/QueryState";
 const dateTime = (value: string | null) =>
   value ? new Date(value).toLocaleString("pt-BR") : "—";
 
+const statusLabel = (status: string) =>
+  ({
+    success: "Atualizado",
+    running: "Em andamento",
+    waiting: "Aguardando nova tentativa",
+    interrupted: "Interrompido",
+    partial: "Parcial",
+    unavailable: "Sem permissão no Mercos",
+    error: "Erro",
+    never: "Ainda não sincronizado",
+  })[status] || status;
+
 export function SyncPage() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const status = useQuery({
     queryKey: ["sync-status"],
     queryFn: api.syncStatus,
-    refetchInterval: (query) =>
-      query.state.data?.some((item) => item.status === "running") ? 5_000 : false,
+    refetchInterval: (query) => {
+      const states = query.state.data || [];
+      if (states.some((item) => item.status === "running")) return 5_000;
+      if (states.some((item) => item.status === "waiting")) return 30_000;
+      return false;
+    },
   });
   const runs = useQuery({
     queryKey: ["sync-runs", page],
     queryFn: () => api.syncRuns(page),
     refetchInterval: status.data?.some((item) => item.status === "running")
       ? 5_000
-      : false,
+      : status.data?.some((item) => item.status === "waiting")
+        ? 30_000
+        : false,
   });
   const sync = useMutation({
     mutationFn: (resource: string) => api.sync(resource, false),
@@ -40,7 +58,10 @@ export function SyncPage() {
       ]);
     },
   });
-  const running = status.data?.some((item) => item.status === "running") || sync.isPending;
+  const autoManaged =
+    status.data?.some((item) => ["running", "waiting"].includes(item.status)) ||
+    sync.isPending;
+  const waiting = status.data?.some((item) => item.status === "waiting");
 
   return (
     <div className="page-stack">
@@ -49,17 +70,16 @@ export function SyncPage() {
           <div>
             <h2>Sincronização Mercos</h2>
             <p>
-              Execuções incrementais administrativas. Se aparecer 429, espere
-              3–5 minutos e clique só em <strong>Sincronizar pedidos</strong>
-              — não dispare “Sincronizar tudo” de novo enquanto a Mercos
-              estiver limitada.
+              Atualização automática: pedidos a cada 10 minutos e um recurso de
+              catálogo por vez a cada 30 minutos. Quando o Mercos limitar as
+              chamadas, o sistema aguarda e tenta novamente sozinho.
             </p>
           </div>
           <div className="table-actions">
-            <button type="button" disabled={running} onClick={() => sync.mutate("orders")}>
+            <button type="button" disabled={autoManaged} onClick={() => sync.mutate("orders")}>
               Sincronizar pedidos
             </button>
-            <button type="button" disabled={running} onClick={() => sync.mutate("all")}>
+            <button type="button" disabled={autoManaged} onClick={() => sync.mutate("all")}>
               Sincronizar tudo
             </button>
             <button
@@ -73,6 +93,12 @@ export function SyncPage() {
         </div>
         {sync.error && <div className="state-panel error">{sync.error.message}</div>}
         {cancel.error && <div className="state-panel error">{cancel.error.message}</div>}
+        {waiting && (
+          <div className="state-panel">
+            O Mercos limitou temporariamente as chamadas. Nenhuma ação é
+            necessária: a próxima tentativa será automática.
+          </div>
+        )}
         <QueryState
           loading={status.isLoading}
           error={status.error as Error | null}
@@ -89,7 +115,7 @@ export function SyncPage() {
                 {status.data.map((item) => (
                   <tr key={item.resource}>
                     <td>{item.resource}</td>
-                    <td>{item.status}</td>
+                    <td>{statusLabel(item.status)}</td>
                     <td>{item.records?.toLocaleString("pt-BR") || 0}</td>
                     <td>{dateTime(item.lastSuccessAt)}</td>
                     <td>{item.error || "—"}</td>
@@ -133,7 +159,7 @@ export function SyncPage() {
                         <td>{dateTime(run.startedAt)}</td>
                         <td>{run.resource}</td>
                         <td>{run.mode}</td>
-                        <td>{run.status}</td>
+                        <td>{statusLabel(run.status)}</td>
                         <td>{run.pages}</td>
                         <td>{run.received}</td>
                         <td>{run.persisted}</td>
