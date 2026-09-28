@@ -396,7 +396,9 @@ export function CustomersPage({
           />
         }
         onExcludeVisible={(rows) => {
-          rows.forEach((row) => excludeCustomer(row.id, row.name));
+          rows.forEach((row) => {
+            excludeCustomer(row.id, row.name);
+          });
         }}
         renderSummary={(summary) => (
           <CustomerCohortCards
