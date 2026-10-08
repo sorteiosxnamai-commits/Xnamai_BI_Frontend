@@ -73,6 +73,26 @@
 .home-gate-grid article:last-child a {
   background: #5c5ee0;
 }
+.home-gate-grid article:nth-child(3) a {
+  background: #5c5ee0;
+}
+.home-gate-grid.has-erp {
+  grid-template-columns: repeat(4, minmax(200px, 260px));
+  width: min(1100px, 100%);
+}
+.home-gate-grid.has-erp article:nth-child(4) a {
+  background: #0f766e;
+}
+@media (max-width: 1100px) {
+  .home-gate-grid.has-erp {
+    grid-template-columns: repeat(2, minmax(200px, 300px));
+  }
+}
+@media (max-width: 760px) {
+  .home-gate-grid.has-erp {
+    grid-template-columns: 1fr;
+  }
+}
 .crm-app > .app-sidebar {
   background: #14261f;
 }

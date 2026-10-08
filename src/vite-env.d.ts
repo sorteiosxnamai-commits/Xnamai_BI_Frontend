@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_BI_API_URL: string;
+  readonly VITE_ERP_ENABLED?: string;
 }
 
 interface ImportMeta {

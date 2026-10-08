@@ -6,6 +6,7 @@
 			"src/app/**",
 			"src/auth/**",
 			"src/components/**",
+			"src/erp/**",
 			"src/hooks/**",
 			"src/pages/**",
 			"src/test/**",

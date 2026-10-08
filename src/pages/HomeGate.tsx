@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { erpEnabled } from "../erp/config";
 import { AppearanceSelect } from "../theme/AppearanceSelect";
 
 export function HomeGate() {
+  const showErp = erpEnabled();
   return (
     <main className="home-gate">
       <div className="home-gate-head">
@@ -12,7 +14,7 @@ export function HomeGate() {
         </p>
         <AppearanceSelect />
       </div>
-      <div className="home-gate-grid">
+      <div className={showErp ? "home-gate-grid has-erp" : "home-gate-grid"}>
         <article>
           <small>Equipe comercial</small>
           <h2>CRM de Vendas</h2>
@@ -31,6 +33,17 @@ export function HomeGate() {
           <p>Indicadores, qualidade de dados e sincronizacao Mercos. Exige usuario e senha.</p>
           <Link to="/overview">Entrar no BI</Link>
         </article>
+        {showErp && (
+          <article>
+            <small>Gestão operacional</small>
+            <h2>ERP Xnamai</h2>
+            <p>
+              Clientes, produtos, pedidos, compras, estoque e financeiro conectados ao Mercos. Acesso por
+              permissão individual.
+            </p>
+            <Link to="/erp">Entrar no ERP</Link>
+          </article>
+        )}
       </div>
     </main>
   );

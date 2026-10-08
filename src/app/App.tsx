@@ -13,6 +13,8 @@ import { useAuth } from "../auth/AuthProvider";
 import { GlobalFilterBar } from "../components/filters/GlobalFilterBar";
 import { QueryState } from "../components/feedback/QueryState";
 import { CrmApp } from "../crm/CrmApp";
+import { isErpPath } from "../erp/config";
+import { ErpEntry } from "../erp/ErpEntry";
 import { useAnalyticsFilters } from "../hooks/useAnalyticsFilters";
 import { DataQualityPage } from "../pages/DataQualityPage";
 import { HomeGate } from "../pages/HomeGate";
@@ -101,6 +103,10 @@ export function App() {
   }
   if (location.pathname.startsWith("/analise-varejo")) {
     return <RetailApp />;
+  }
+  // ERP: /erp e /erp/..., com limite de segmento (nunca /erpfoo).
+  if (isErpPath(location.pathname)) {
+    return <ErpEntry />;
   }
   return <BiApp />;
 }

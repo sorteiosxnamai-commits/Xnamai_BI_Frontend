@@ -1,0 +1,426 @@
+/* Estilos do ERP: tudo sob .erp-*, sem tocar nas classes do BI/CRM/varejo. */
+.erp-app > .app-sidebar {
+  background: #14261f;
+}
+.erp-app .app-sidebar nav a:hover,
+.erp-app .app-sidebar nav a.active {
+  background: #1f3d32;
+  color: #fff;
+}
+.erp-content {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.erp-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.erp-page-head h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: var(--text-heading);
+}
+.erp-page-head p {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.erp-page-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.erp-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.erp-card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text-heading);
+}
+.erp-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.erp-metric {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+.erp-metric > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.erp-metric > strong {
+  display: block;
+  margin: 6px 0 4px;
+  font-size: 20px;
+}
+.erp-metric > small {
+  color: var(--text-subtle);
+  font-size: 10px;
+}
+.erp-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.erp-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.erp-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.erp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.erp-field input,
+.erp-field select,
+.erp-field textarea {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.erp-field textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+.erp-field input[aria-invalid="true"],
+.erp-field select[aria-invalid="true"] {
+  border-color: var(--negative);
+}
+.erp-field-error {
+  color: var(--error-text);
+  font-size: 11px;
+}
+.erp-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.erp-form .erp-wide {
+  grid-column: 1 / -1;
+}
+.erp-form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+}
+.erp-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.erp-btn:hover:not(:disabled),
+.erp-btn:focus-visible {
+  background: var(--bg-hover);
+  outline: 2px solid #1f6a4a;
+  outline-offset: 1px;
+}
+.erp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.erp-btn-primary {
+  border-color: #1f6a4a;
+  background: #1f6a4a;
+  color: #fff;
+}
+.erp-btn-primary:hover:not(:disabled) {
+  background: #18573c;
+}
+.erp-btn-danger {
+  border-color: var(--negative);
+  color: var(--negative);
+}
+.erp-table-wrap {
+  overflow: auto;
+  max-width: 100%;
+}
+.erp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.erp-table th {
+  position: sticky;
+  top: 0;
+  padding: 9px 10px;
+  border-block: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  text-align: left;
+  white-space: nowrap;
+}
+.erp-table th button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.erp-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.erp-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.erp-row-link {
+  cursor: pointer;
+}
+.erp-row-link:hover,
+.erp-row-link:focus-visible {
+  background: var(--bg-hover);
+  outline: none;
+}
+.erp-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.erp-pager span {
+  margin-right: auto;
+}
+.erp-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--chip-text);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.erp-badge-ok {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.erp-badge-bad {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+.erp-badge-warn {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.erp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.erp-state strong {
+  color: var(--text);
+}
+.erp-state-error,
+.erp-state-forbidden {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+.erp-state-unavailable {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.erp-state-loading {
+  animation: erp-pulse 1.3s ease-in-out infinite;
+}
+@keyframes erp-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+.erp-notice {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--warning-border);
+  border-radius: 9px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-size: 12px;
+}
+.erp-notice small {
+  opacity: 0.85;
+}
+.erp-operation {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-muted);
+  font-size: 12px;
+}
+.erp-operation-ok {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+}
+.erp-operation-bad {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+}
+.erp-operation-warn {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+}
+.erp-operation small {
+  color: var(--text-muted);
+}
+.erp-dl {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  margin: 0;
+}
+.erp-dl dt {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.erp-dl dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.erp-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+.erp-tab {
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.erp-tab.active {
+  border-bottom-color: #1f6a4a;
+  color: var(--text);
+  font-weight: 700;
+}
+.erp-split {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.erp-muted {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.erp-diff {
+  min-width: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  font-size: 12px;
+}
+.erp-diff > div {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.erp-items-editor {
+  display: grid;
+  gap: 8px;
+}
+.erp-items-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 2fr) 110px 130px auto;
+  align-items: end;
+}
+.erp-suggestions {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+.erp-suggestion {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+}
+@media (max-width: 900px) {
+  .erp-app > .app-sidebar {
+    position: static;
+    width: auto;
+  }
+  .erp-items-row,
+  .erp-diff {
+    grid-template-columns: 1fr;
+  }
+}
+.erp-link-button {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #3f46c8;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
