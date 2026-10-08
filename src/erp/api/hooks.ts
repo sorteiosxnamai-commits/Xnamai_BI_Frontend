@@ -1,15 +1,15 @@
-import { useRef } from "react";
 import {
   keepPreviousData,
+  type UseQueryOptions,
   useMutation,
   useQuery,
   useQueryClient,
-  type UseQueryOptions,
 } from "@tanstack/react-query";
+import { useRef } from "react";
 import type { z } from "zod";
 import { useErp } from "../auth/context";
 import { newIdempotencyKey } from "../format";
-import { erpRequest, type RequestOptions } from "./client";
+import { ErpApiError, erpRequest, type RequestOptions } from "./client";
 
 /**
  * Query keys do ERP: ['erp', connectionId, recurso, filtros]. Nunca invalidam
@@ -24,11 +24,21 @@ export function useErpQuery<T>(
   } = {},
 ) {
   const { connectionId } = useErp();
+  const baseRetry = useQueryClient().getDefaultOptions().queries?.retry;
   const { keepPrevious, ...rest } = options;
   return useQuery<T>({
     queryKey: ["erp", connectionId, ...parts],
     queryFn: ({ signal }) => erpRequest(path, schema, { signal }),
     placeholderData: keepPrevious ? keepPreviousData : undefined,
+    // Autenticação/permissão/módulo desligado não melhoram tentando de novo (e cada tentativa
+    // dispararia outra renovação de sessão).
+    retry: (count, error) => {
+      if (error instanceof ErpApiError && [401, 403, 404].includes(error.status)) return false;
+      if (typeof baseRetry === "function") return baseRetry(count, error);
+      if (typeof baseRetry === "number") return count < baseRetry;
+      if (baseRetry === false) return false;
+      return count < 3; // padrão do react-query
+    },
     ...rest,
   });
 }

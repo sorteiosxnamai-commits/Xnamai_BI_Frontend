@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { authenticatedFetch, refreshSession } from "../../auth/session";
-
-import { ErpApiError, apiUrl, normalizeError } from "./errors";
 import { erpAccessToken, erpRefresh } from "../auth/erpSession";
+import { apiUrl, ErpApiError, normalizeError } from "./errors";
 
-export { ErpApiError, apiUrl };
+export { apiUrl, ErpApiError };
+
+/** Disparado quando um 401 não pôde ser renovado; o ErpGuard volta ao login. */
+export const ERP_AUTH_EXPIRED = "erp-auth-expired";
 
 export type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -61,6 +63,12 @@ export async function erpRequest<T>(
       // escritas ainda não aceitas, pois 401 nunca chegou à regra de negócio).
       const renewed = erpAccessToken() ? await erpRefresh() : await refreshSession();
       if (renewed) response = await send(url, options, controller.signal);
+      if (!renewed && response.status === 401) {
+        // Sem como renovar (cookie de renovação ausente/expirado): é falha de autenticação,
+        // nunca uma lista vazia. A interface volta ao login e explica o motivo.
+        window.dispatchEvent(new Event(ERP_AUTH_EXPIRED));
+        throw new ErpApiError(401, "session_expired", "Sessão expirada. Entre novamente para continuar.");
+      }
     }
     const raw = await response.text();
     if (!response.ok) throw normalizeError(response.status, raw);

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { refreshSession } from "../../auth/session";
 import { LoginPage } from "../../pages/LoginPage";
-import { erpRequest, ErpApiError } from "../api/client";
+import { ERP_AUTH_EXPIRED, ErpApiError, erpRequest } from "../api/client";
 import { capabilitiesSchema, meSchema } from "../api/schemas";
 import { StatePanel } from "../components/StatePanel";
 import { ChangePasswordForm } from "./ChangePasswordForm";
@@ -50,11 +50,22 @@ export function ErpGuard({ children }: { children: ReactNode }) {
     };
   }, [loading, user, phase]);
 
+  const [notice, setNotice] = useState("");
   const goLogin = useCallback(() => {
     clearErpSession();
     queryClient.removeQueries({ queryKey: ["erp"] });
     setPhase("login");
   }, [queryClient]);
+
+  // Qualquer chamada do ERP que perca a sessão (não só /me) leva ao login com aviso.
+  useEffect(() => {
+    const onExpired = () => {
+      setNotice("Sua sessão expirou. Entre novamente para continuar.");
+      goLogin();
+    };
+    window.addEventListener(ERP_AUTH_EXPIRED, onExpired);
+    return () => window.removeEventListener(ERP_AUTH_EXPIRED, onExpired);
+  }, [goLogin]);
 
   const me = useQuery({
     queryKey: ["erp", "me"],
@@ -105,7 +116,9 @@ export function ErpGuard({ children }: { children: ReactNode }) {
   if (phase === "login") {
     return (
       <ErpLoginPage
+        notice={notice}
         onSuccess={() => {
+          setNotice("");
           queryClient.removeQueries({ queryKey: ["erp"] });
           setPhase("ready");
         }}

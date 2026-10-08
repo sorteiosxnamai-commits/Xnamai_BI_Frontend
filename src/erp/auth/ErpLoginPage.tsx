@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { AppearanceSelect } from "../../theme/AppearanceSelect";
 import { erpLogin } from "./erpSession";
@@ -10,9 +10,11 @@ import { erpLogin } from "./erpSession";
 export function ErpLoginPage({
   onSuccess,
   onUseBiLogin,
+  notice,
 }: {
   onSuccess: () => void;
   onUseBiLogin: () => void;
+  notice?: string;
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +63,11 @@ export function ErpLoginPage({
             required
           />
         </label>
+        {notice && !error && (
+          <div className="login-error" role="status">
+            {notice}
+          </div>
+        )}
         {error && (
           <div className="login-error" role="alert">
             {error}
