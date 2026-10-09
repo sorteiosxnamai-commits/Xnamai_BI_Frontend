@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { CustomerDetail } from "../../api/schemas";
-import { CustomerForm, validateCustomer } from "./CustomerForm";
 import { mockFetch, renderErp } from "../../test/utils";
+import { CustomerForm, validateCustomer } from "./CustomerForm";
 
 const customer: CustomerDetail = {
   id: "10",

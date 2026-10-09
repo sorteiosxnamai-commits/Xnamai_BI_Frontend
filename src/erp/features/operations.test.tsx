@@ -2,11 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { cap, erpContext, mockFetch, page, renderErp } from "../test/utils";
 import { AccountPage } from "./AccountPage";
 import { AdminPage } from "./AdminPage";
-import { OrderDetailPage, itemsPayload } from "./orders/OrderDetailPage";
+import { itemsPayload, OrderDetailPage } from "./orders/OrderDetailPage";
 import { PurchasingPage } from "./purchasing/PurchasingPage";
-import { cap, erpContext, mockFetch, page, renderErp } from "../test/utils";
 
 beforeEach(() => vi.stubEnv("VITE_BI_API_URL", "https://api.test"));
 afterEach(() => {
@@ -199,4 +199,54 @@ test("minha conta: operador individual lista sessões e troca a senha", async ()
   expect(await screen.findByText("Esta sessão")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Encerrar" })).toBeInTheDocument();
   expect(screen.getByRole("form", { name: "Trocar senha" })).toBeInTheDocument();
+});
+
+function renderCancelable(options: { permissions?: string[]; capability?: Record<string, unknown>; onPost?: (call: { url: string; body: unknown; headers: Headers }) => void } = {}) {
+  mockFetch((call) => {
+    if (call.method === "POST" && call.url === "/sales-orders/10/cancel") {
+      options.onPost?.(call);
+      return { status: 202, body: operation({ kind: "cancel_order" }) };
+    }
+    if (call.url.startsWith("/integration/operations/")) return { body: operation({ kind: "cancel_order" }) };
+    if (call.url === "/sales-orders/10") return { body: order };
+    if (call.url === "/sales-orders/10/history") return { body: { items: [] } };
+    if (call.url.startsWith("/catalogs/") || call.url.startsWith("/products")) return { body: page([]) };
+  });
+  return renderErp(
+    <Routes>
+      <Route path="/erp/pedidos/:id" element={<OrderDetailPage />} />
+    </Routes>,
+    {
+      route: "/erp/pedidos/10",
+      context: erpContext(options.permissions ?? ["*"], [cap("write.order_cancel", options.capability ?? {})]),
+    },
+  );
+}
+
+test("cancelar pedido: confirmação em duas etapas, motivo obrigatório e envio com versão e Idempotency-Key", async () => {
+  const posts: { url: string; body: unknown; headers: Headers }[] = [];
+  renderCancelable({ onPost: (call) => posts.push(call) });
+  await userEvent.click(await screen.findByRole("button", { name: "Cancelar pedido…" }));
+  const form = within(screen.getByRole("form", { name: "Cancelar pedido" }));
+  await userEvent.click(form.getByRole("button", { name: "Cancelar pedido" }));
+  expect(await form.findByText(/Informe o motivo do cancelamento/)).toBeInTheDocument();
+  await userEvent.type(form.getByLabelText(/Motivo/), "Cliente desistiu");
+  await userEvent.click(form.getByRole("button", { name: "Cancelar pedido" }));
+  expect(await form.findByText(/não tem desfazer automático/)).toBeInTheDocument();
+  expect(posts).toHaveLength(0); // ainda só pediu a confirmação
+  await userEvent.click(form.getByRole("button", { name: "Confirmar cancelamento" }));
+  await waitFor(() => expect(posts).toHaveLength(1));
+  expect(posts[0].body).toEqual({ expectedVersion: 2, reason: "Cliente desistiu" });
+  expect(posts[0].headers.get("Idempotency-Key")).toBeTruthy();
+  expect(screen.getByText(/só é dado como confirmado quando o pedido voltar cancelado/)).toBeInTheDocument();
+});
+
+test("cancelar pedido não aparece sem permissão nem com a capacidade desligada", async () => {
+  const a = renderCancelable({ permissions: ["read", "orders:write"] });
+  await screen.findByText("Pedido 100");
+  expect(screen.queryByRole("button", { name: "Cancelar pedido…" })).not.toBeInTheDocument();
+  a.unmount();
+  renderCancelable({ capability: { enabled: false, reason: "Flag ERP_WRITE_ORDERS desligada" } });
+  expect(await screen.findByText(/Flag ERP_WRITE_ORDERS desligada/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Cancelar pedido…" })).not.toBeInTheDocument();
 });

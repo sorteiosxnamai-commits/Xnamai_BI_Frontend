@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
-import { useErp } from "../../auth/context";
 import { useErpQuery } from "../../api/hooks";
 import { productDetailSchema, productPricesSchema } from "../../api/schemas";
+import { useErp } from "../../auth/context";
 import { StatePanel } from "../../components/StatePanel";
 import { Badge, CapabilityNotice, Dl, PageHeader } from "../../components/ui";
 import { formatInstant, formatMoney, formatQuantity } from "../../format";

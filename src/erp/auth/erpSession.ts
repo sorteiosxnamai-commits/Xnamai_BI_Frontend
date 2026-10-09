@@ -1,4 +1,4 @@
-import { ErpApiError, apiUrl, normalizeError } from "../api/errors";
+import { apiUrl, ErpApiError, normalizeError } from "../api/errors";
 
 /**
  * Sessão individual do ERP, independente do login do BI. O access token vive só

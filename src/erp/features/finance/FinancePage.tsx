@@ -1,25 +1,39 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { z, type ZodType } from "zod";
-import { useErp } from "../../auth/context";
-import { buildQuery } from "../../api/client";
+import { type FormEvent, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { type ZodType, z } from "zod";
+import { buildQuery, erpDownload } from "../../api/client";
 import { useCommand, useErpQuery, useInvalidateErp } from "../../api/hooks";
 import {
   accountSchema,
+  type Customer,
   cashFlowSchema,
+  type FinanceSummary,
+  type FinTitle,
+  financeSummarySchema,
   finTitleSchema,
+  type Order,
+  orderSchema,
+  type Page,
   pageOf,
+  type Refund,
+  refundSchema,
+  type Supplier,
   simpleListSchema,
   supplierSchema,
-  type Customer,
-  type FinTitle,
-  type Page,
-  type Supplier,
 } from "../../api/schemas";
+import { useErp } from "../../auth/context";
+import { Icon } from "../../components/icons";
+import { OrderPicker } from "../../components/OrderPicker";
+import { Pill } from "../../components/Pill";
 import { CustomerPicker } from "../../components/pickers";
-import { ServerList, type Column } from "../../components/ServerList";
+import { type Column, ServerList } from "../../components/ServerList";
 import { StatePanel } from "../../components/StatePanel";
-import { Badge, FieldError, PageHeader, Tabs, CommandError, useFocusInvalid } from "../../components/ui";
+import { Badge, CommandError, FieldError, Tabs, useFocusInvalid } from "../../components/ui";
 import { formatDay, formatInstant, formatMoney, parseMoneyInput } from "../../format";
+import { useScope } from "../../scope";
+import { PixCell, paymentSpec, StatePill } from "../orders/orderUi";
+import { RefundStatus } from "../refunds/RefundsPage";
+import { FINANCE_STATE } from "./financeUi";
 
 const titlePage = pageOf(finTitleSchema) as unknown as ZodType<Page<FinTitle>>;
 const supplierPage = pageOf(supplierSchema) as unknown as ZodType<Page<Supplier>>;
@@ -35,7 +49,7 @@ function Summary({ lines }: { lines: [string, string][] }) {
   );
 }
 
-function SettleForm({ installmentId, open, accountsList, onDone }: { installmentId: number; open: string; accountsList: { id: number; name: string }[]; onDone: () => void }) {
+export function SettleForm({ installmentId, open, accountsList, onDone }: { installmentId: number; open: string; accountsList: { id: number; name: string }[]; onDone: () => void }) {
   const [accountId, setAccountId] = useState("");
   const [amount, setAmount] = useState(open);
   const [reference, setReference] = useState("");
@@ -279,7 +293,7 @@ function SimpleCreate({ path, title, resource, withKind }: { path: string; title
   );
 }
 
-export function FinancePage() {
+function LedgerSection() {
   const { can } = useErp();
   const [tab, setTab] = useState<"titles" | "accounts" | "setup" | "cash">("titles");
   const [creating, setCreating] = useState(false);
@@ -303,11 +317,17 @@ export function FinancePage() {
 
   return (
     <>
-      <PageHeader
-        title="Financeiro local"
-        subtitle="Contas a pagar e a receber próprias do ERP. Não confundem título Mercos do cliente com passivo de fornecedores; faturamento não é caixa."
-        actions={can("finance:write") && tab === "titles" ? <button type="button" className="erp-btn erp-btn-primary" onClick={() => setCreating((v) => !v)}>Novo título</button> : null}
-      />
+      <div className="erp-pagehead">
+        <div>
+          <h2>Contas, títulos e fluxo de caixa</h2>
+          <p>Contas a pagar e a receber próprias do ERP. Não confundem título Mercos do cliente com passivo de fornecedores; faturamento não é caixa.</p>
+        </div>
+        <div className="erp-pagehead-actions">
+          {can("finance:write") && tab === "titles" && (
+            <button type="button" className="erp-btn" onClick={() => setCreating((v) => !v)}>Novo título</button>
+          )}
+        </div>
+      </div>
       <Tabs tabs={[{ id: "titles", label: "Títulos e parcelas" }, { id: "accounts", label: "Contas" }, { id: "setup", label: "Categorias e centros de custo" }, { id: "cash", label: "Fluxo de caixa" }]} value={tab} onChange={setTab} />
       {tab === "titles" && (
         <>
@@ -366,6 +386,341 @@ export function FinancePage() {
             </table></div>
           )}
         </section>
+      )}
+    </>
+  );
+}
+
+const orderPage = pageOf(orderSchema) as unknown as ZodType<Page<Order>>;
+const refundPage = pageOf(refundSchema) as unknown as ZodType<Page<Refund>>;
+
+const NEXT_ACTION: Record<string, string> = {
+  none: "Criar título a receber",
+  open: "Aguardar pagamento",
+  partial: "Aguardar o saldo",
+  paid: "—",
+};
+
+function Kpi({
+  title,
+  value,
+  note,
+  tone,
+  unavailable,
+}: {
+  title: string;
+  value: string;
+  note?: string | null;
+  tone: string;
+  unavailable?: boolean;
+}) {
+  return (
+    <div className={`erp-kpi erp-kpi-${tone}`}>
+      <span className="erp-kpi-title">{title}</span>
+      <strong className={unavailable ? "erp-kpi-unavailable" : undefined}>{value}</strong>
+      {note && <small>{note}</small>}
+    </div>
+  );
+}
+
+function variationText(v: FinanceSummary["sales"]["variation"]): string {
+  if (!v.available) return `Variação indisponível: ${v.reason ?? "sem base de comparação"}`;
+  const percent = Number(v.percent);
+  return `${percent > 0 ? "+" : ""}${v.percent?.replace(".", ",")}% vs. período anterior`;
+}
+
+export function FinancePage() {
+  const { can } = useErp();
+  const navigate = useNavigate();
+  const scope = useScope();
+  const [picker, setPicker] = useState<null | "pay" | "refund">(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const status = scope.params.get("financeStatus") ?? "";
+  const kind = scope.params.get("kind") ?? "";
+  const filters: Record<string, string | undefined> = {
+    search: scope.search || undefined,
+    dateFrom: scope.from,
+    dateTo: scope.to,
+    kind: kind || undefined,
+    financeStatus: status || undefined,
+  };
+  const summary = useErpQuery<FinanceSummary>(
+    ["finance-summary", scope.from, scope.to],
+    `/finance/orders-summary${buildQuery({ dateFrom: scope.from, dateTo: scope.to })}`,
+    financeSummarySchema,
+    { keepPrevious: true, enabled: can("finance:read") },
+  );
+  const requests = useErpQuery<Page<Refund>>(
+    ["refunds", "preview"],
+    `/refund-requests${buildQuery({ page_size: 5 })}`,
+    refundPage,
+    { enabled: can("refunds:read") },
+  );
+  const s = summary.data;
+
+  async function exportReport() {
+    setExportError(null);
+    setExporting(true);
+    try {
+      const { blob, truncated } = await erpDownload(`/finance/orders-report.csv${buildQuery(filters)}`);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "financeiro-pedidos.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+      if (truncated) setExportError("O relatório foi limitado a 5.000 linhas; restrinja o período ou os filtros.");
+    } catch (error) {
+      setExportError((error as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const columns: Column<Order>[] = [
+    { key: "number", header: "Pedido", sortKey: "number", render: (o) => <strong>#{o.number ?? o.id}</strong> },
+    { key: "customer", header: "Cliente", render: (o) => o.operational?.customerName ?? o.customerName ?? "—" },
+    { key: "total", header: "Valor", sortKey: "netTotal", render: (o) => formatMoney(o.netTotal) },
+    {
+      key: "order",
+      header: "Status do pedido",
+      render: (o) => <Pill tone={o.kind === "cancelled" ? "bad" : "info"}>{o.operational?.state.label ?? o.kind}</Pill>,
+    },
+    {
+      key: "finance",
+      header: "Situação financeira (local)",
+      render: (o) => {
+        const st = o.operational?.finance;
+        const spec = FINANCE_STATE[st?.state ?? "unavailable"] ?? FINANCE_STATE.unavailable;
+        return (
+          <span>
+            <Pill tone={spec.tone}>{spec.label}</Pill>
+            {st?.deadline === "overdue" && <Pill tone="bad">Vencida</Pill>}
+          </span>
+        );
+      },
+    },
+    {
+      key: "mercos",
+      header: "Pagamento Mercos",
+      render: (o) => <StatePill spec={paymentSpec(o.operational?.payment)} title="Estado espelhado do Mercos" />,
+    },
+    { key: "pix", header: "Pix", render: (o) => <PixCell pix={o.operational?.pix} /> },
+    {
+      key: "updated",
+      header: "Última atualização",
+      render: (o) => {
+        const action = o.operational?.lastHumanAction;
+        return (
+          <div className="erp-updated">
+            <span>{formatInstant(action?.at ?? o.operational?.lastExternalUpdateAt ?? o.issuedAt)}</span>
+            <small className="erp-muted">{action ? `por ${action.operator}` : "sincronizado do Mercos"}</small>
+          </div>
+        );
+      },
+    },
+    {
+      key: "owner",
+      header: "Responsável",
+      render: (o) => o.operational?.responsible.name ?? o.operational?.responsible.sellerId ?? "—",
+    },
+    {
+      key: "next",
+      header: "Ação necessária",
+      render: (o) => {
+        const st = o.operational?.finance;
+        if (st?.deadline === "overdue" && st.state !== "paid") return <Pill tone="warn">Cobrar parcela vencida</Pill>;
+        const text = NEXT_ACTION[st?.state ?? ""] ?? "—";
+        return text === "—" ? <span className="erp-muted">—</span> : <Pill tone="warn">{text}</Pill>;
+      },
+    },
+    {
+      key: "open",
+      header: "Ações",
+      render: (o) => (
+        <Link to={`/erp/financeiro/pedidos/${encodeURIComponent(o.id)}`} onClick={(e) => e.stopPropagation()}>
+          Abrir financeiro
+        </Link>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <div className="erp-pagehead">
+        <div>
+          <h1>Financeiro</h1>
+          <p>Acompanhe recebimentos, pagamentos, reembolsos e pendências financeiras por pedido.</p>
+        </div>
+        <div className="erp-pagehead-actions">
+          {can("finance:settle") && (
+            <button type="button" className="erp-btn erp-btn-primary" onClick={() => setPicker("pay")}>
+              Registrar pagamento
+            </button>
+          )}
+          {can("refunds:request") && (
+            <button type="button" className="erp-btn" onClick={() => setPicker("refund")}>
+              Solicitar reembolso
+            </button>
+          )}
+          <button type="button" className="erp-btn" disabled={exporting} onClick={() => void exportReport()}>
+            <Icon name="invoice" /> Exportar relatório
+          </button>
+        </div>
+      </div>
+      {exportError && (
+        <div className="erp-notice" role="alert">
+          <strong>Exportação</strong>
+          <span>{exportError}</span>
+        </div>
+      )}
+      <section className="erp-kpis" aria-label="Indicadores financeiros">
+        <Kpi
+          title="Vendas (valor vendido)"
+          value={s ? formatMoney(s.sales.net) : summary.isLoading ? "…" : "Indisponível"}
+          note={s ? `${s.sales.orders} pedidos · ${variationText(s.sales.variation)}` : undefined}
+          tone="ok"
+          unavailable={!s && !summary.isLoading}
+        />
+        <Kpi
+          title="Recebido (caixa)"
+          value={s ? formatMoney(s.cash.net) : summary.isLoading ? "…" : "Indisponível"}
+          note={s ? variationText(s.cash.variation) : undefined}
+          tone="info"
+          unavailable={!s && !summary.isLoading}
+        />
+        <Kpi
+          title="A receber"
+          value={s ? formatMoney(s.receivable.open) : summary.isLoading ? "…" : "Indisponível"}
+          note={s ? `${formatMoney(s.receivable.overdue)} vencido` : undefined}
+          tone="warn"
+          unavailable={!s && !summary.isLoading}
+        />
+        <Kpi
+          title="Pix pendentes"
+          value="Indisponível"
+          note={s?.pix.reason ?? "Sem provedor de Pix configurado"}
+          tone="purple"
+          unavailable
+        />
+        <Kpi
+          title="Reembolsos devolvidos"
+          value={s ? formatMoney(s.refunds.returned) : summary.isLoading ? "…" : "Indisponível"}
+          note={
+            s
+              ? `${s.refunds.byStatus.requested?.count ?? 0} solicitados · ${s.refunds.byStatus.approved?.count ?? 0} aprovados`
+              : undefined
+          }
+          tone="neutral"
+          unavailable={!s && !summary.isLoading}
+        />
+      </section>
+      {s && (
+        <details className="erp-card">
+          <summary>Como cada indicador é calculado</summary>
+          <ul>
+            {Object.entries(s.formulas).map(([key, text]) => (
+              <li key={key}>{text}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <section aria-label="Acompanhamento de pedidos e pagamentos">
+        <h2 className="erp-section-title">Acompanhamento de pedidos e pagamentos</h2>
+        <div className="erp-filterbar">
+          <label className="erp-select-field">
+            Status do pedido
+            <select value={kind} onChange={(e) => scope.set({ kind: e.target.value || undefined })}>
+              <option value="">Todos</option>
+              <option value="order">Pedidos</option>
+              <option value="quote">Orçamentos</option>
+              <option value="cancelled">Cancelados</option>
+            </select>
+          </label>
+          <label className="erp-select-field">
+            Situação financeira
+            <select value={status} onChange={(e) => scope.set({ financeStatus: e.target.value || undefined })}>
+              <option value="">Todas</option>
+              <option value="none">Sem título</option>
+              <option value="open">Em aberto</option>
+              <option value="partial">Pago parcialmente</option>
+              <option value="paid">Pago</option>
+              <option value="overdue">Vencida</option>
+            </select>
+          </label>
+          <span className="erp-muted">Busca e período vêm do cabeçalho. Pix: sem provedor, por isso não há filtro.</span>
+        </div>
+        <ServerList<Order>
+          resource="finance-orders"
+          path="/sales-orders"
+          schema={orderPage}
+          caption="Pedidos e pagamentos"
+          columns={columns}
+          fixedParams={{ ...filters, include: "operational" }}
+          defaultSort="issuedAt"
+          defaultOrder="desc"
+          rowKey={(o) => o.id}
+          onRowOpen={(o) => navigate(`/erp/financeiro/pedidos/${encodeURIComponent(o.id)}`)}
+          emptyMessage="Nenhum pedido com a busca, o período e os filtros atuais."
+        />
+      </section>
+      {can("refunds:read") && (
+        <section className="erp-card" aria-label="Solicitações financeiras">
+          <h3>
+            Solicitações financeiras ({requests.data?.totalItems ?? "—"}){" "}
+            <Link to="/erp/reembolsos">Ver todas as solicitações</Link>
+          </h3>
+          {requests.isLoading && <StatePanel kind="loading" />}
+          {requests.error && (
+            <StatePanel kind="error" message={(requests.error as Error).message} onRetry={() => void requests.refetch()} />
+          )}
+          {requests.data && requests.data.items.length === 0 && (
+            <p className="erp-muted">Nenhuma solicitação de reembolso registrada.</p>
+          )}
+          {requests.data && requests.data.items.length > 0 && (
+            <div className="erp-table-wrap">
+              <table className="erp-table">
+                <thead>
+                  <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Pedido</th>
+                    <th scope="col">Valor</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Responsável</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.data.items.map((r) => (
+                    <tr key={r.id}>
+                      <td>#SR-{String(r.id).padStart(4, "0")}</td>
+                      <td>Reembolso</td>
+                      <td>
+                        <Link to={`/erp/pedidos/${encodeURIComponent(r.orderId)}`}>#{r.orderId}</Link>
+                      </td>
+                      <td>{formatMoney(r.amount)}</td>
+                      <td>
+                        <RefundStatus status={r.status} />
+                      </td>
+                      <td>{formatInstant(r.requestedAt)}</td>
+                      <td>{r.requestedBy}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+      <LedgerSection />
+      {picker && (
+        <OrderPicker
+          title={picker === "pay" ? "Registrar pagamento" : "Solicitar reembolso"}
+          target={(order) => `/erp/financeiro/pedidos/${encodeURIComponent(order.id)}`}
+          onClose={() => setPicker(null)}
+        />
       )}
     </>
   );

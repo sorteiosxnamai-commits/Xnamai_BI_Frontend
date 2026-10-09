@@ -1,12 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
-import { useErp } from "../../auth/context";
 import { useCommand, useInvalidateErp } from "../../api/hooks";
-import { operationSchema, type Customer, type Product } from "../../api/schemas";
+import { type Customer, operationSchema, type Product } from "../../api/schemas";
+import { useErp } from "../../auth/context";
 import { OperationTracker } from "../../components/OperationTracker";
 import { CustomerPicker, ProductPicker, useCatalogOptions } from "../../components/pickers";
 import { StatePanel } from "../../components/StatePanel";
-import { CapabilityNotice, FieldError, PageHeader, CommandError, useFocusInvalid } from "../../components/ui";
+import { CapabilityNotice, CommandError, FieldError, PageHeader, useFocusInvalid } from "../../components/ui";
 import { formatMoney, parseMoneyInput, parseQuantityInput } from "../../format";
 
 type Line = {

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { type Customer, customerSchema, type Page, pageOf } from "../../api/schemas";
 import { useErp } from "../../auth/context";
-import { customerSchema, pageOf, type Customer, type Page } from "../../api/schemas";
-import { ServerList, type Column, type FilterDef } from "../../components/ServerList";
+import { type Column, type FilterDef, ServerList } from "../../components/ServerList";
 import { Badge, CapabilityNotice, PageHeader } from "../../components/ui";
 import { formatInstant } from "../../format";
 import { CustomerForm } from "./CustomerForm";

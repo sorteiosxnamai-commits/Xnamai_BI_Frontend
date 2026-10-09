@@ -1,14 +1,21 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useErp } from "../../auth/context";
 import { useCommand, useErpQuery, useInvalidateErp } from "../../api/hooks";
-import { operationSchema, orderDetailSchema, type OrderDetail, type Product } from "../../api/schemas";
+import {
+  type OrderDetail,
+  operationSchema,
+  orderDetailSchema,
+  orderHistorySchema,
+  type Product,
+} from "../../api/schemas";
+import { useErp } from "../../auth/context";
 import { OperationTracker } from "../../components/OperationTracker";
 import { ProductPicker, useCatalogOptions } from "../../components/pickers";
 import { StatePanel } from "../../components/StatePanel";
-import { Badge, CapabilityNotice, Dl, PageHeader, CommandError } from "../../components/ui";
+import { Badge, CapabilityNotice, CommandError, Dl, PageHeader } from "../../components/ui";
 import { formatDay, formatInstant, formatMoney, formatQuantity, parseMoneyInput, parseQuantityInput } from "../../format";
 import { StatusChips } from "./OrdersPage";
+import { invoiceSpec, PixCell, paymentSpec, StatePill, shippingSpec } from "./orderUi";
 
 type EditLine = { key: number; product: Product | null; quantity: string; unitPrice: string };
 
@@ -200,10 +207,128 @@ function EditPanel({ order, onClose }: { order: OrderDetail; onClose: () => void
   );
 }
 
+function CancelPanel({ order, onClose }: { order: OrderDetail; onClose: () => void }) {
+  const [reason, setReason] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [message, setMessage] = useState("");
+  const [operationId, setOperationId] = useState<string | null>(null);
+  const command = useCommand<Record<string, unknown>, ReturnType<typeof operationSchema.parse>>(operationSchema);
+  const invalidate = useInvalidateErp();
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (reason.trim().length < 3) return setMessage("Informe o motivo do cancelamento (mínimo 3 caracteres).");
+    setMessage("");
+    if (!confirm) return setConfirm(true);
+    const result = await command
+      .mutateAsync({
+        path: `/sales-orders/${encodeURIComponent(order.id)}/cancel`,
+        body: { expectedVersion: order.version, reason: reason.trim() },
+        idempotent: true,
+      })
+      .catch(() => null);
+    if (result) {
+      setOperationId(result.operationId);
+      void invalidate("orders");
+      void invalidate("order", order.id);
+    }
+  }
+
+  return (
+    <form className="erp-card erp-form" onSubmit={submit} aria-label="Cancelar pedido">
+      <h3 className="erp-wide">Cancelar pedido {order.number ?? order.id} no Mercos</h3>
+      <p className="erp-muted erp-wide">
+        O cancelamento é enviado ao Mercos e só é dado como confirmado quando o pedido voltar cancelado na
+        sincronização. Se a resposta demorar ou falhar, o resultado fica em verificação e nada é reenviado
+        automaticamente.
+      </p>
+      <label className="erp-field erp-wide">
+        <span>Motivo (fica no histórico do ERP; o Mercos não recebe o texto)</span>
+        <input value={reason} onChange={(e) => { setReason(e.target.value); setConfirm(false); }} />
+      </label>
+      {confirm && (
+        <div className="erp-notice erp-wide" role="alert">
+          <strong>Confirme: esta ação não tem desfazer automático</strong>
+          <span>O pedido {order.number ?? order.id} será cancelado no Mercos.</span>
+        </div>
+      )}
+      <CommandError error={command.error} local={message} />
+      <div className="erp-form-actions erp-wide">
+        <button type="submit" className="erp-btn erp-btn-primary" disabled={command.isPending || operationId !== null}>
+          {confirm ? "Confirmar cancelamento" : "Cancelar pedido"}
+        </button>
+        <button type="button" className="erp-btn" onClick={onClose}>Fechar</button>
+      </div>
+      {operationId && <div className="erp-wide"><OperationTracker operationId={operationId} /></div>}
+    </form>
+  );
+}
+
+function OrderOperations({ order }: { order: OrderDetail }) {
+  const { can } = useErp();
+  const enc = encodeURIComponent(order.id);
+  const op = order.operational;
+  const history = useErpQuery(["order-history", order.id], `/sales-orders/${enc}/history`, orderHistorySchema);
+  return (
+    <>
+      <section className="erp-card" aria-label="Operações do pedido">
+        <h3>Operações do pedido</h3>
+        <div className="erp-ops-grid">
+          <div>
+            <span className="erp-muted">Frete</span>
+            <StatePill spec={shippingSpec(op?.shipping)} title={op?.shipping.reason} />
+            {can("shipping:read") && <Link to={`/erp/frete/pedidos/${enc}/cotacao`}>Cotação de frete</Link>}
+          </div>
+          <div>
+            <span className="erp-muted">Nota fiscal</span>
+            <StatePill spec={invoiceSpec(op?.invoice)} title={op?.invoice.reason} />
+            {can("invoices:read") && <Link to={`/erp/notas-fiscais/pedidos/${enc}/montagem`}>Montagem da nota fiscal</Link>}
+          </div>
+          <div>
+            <span className="erp-muted">Pagamento</span>
+            <StatePill spec={paymentSpec(op?.payment)} title="Estado espelhado do Mercos" />
+            <PixCell pix={op?.pix} />
+            {can("finance:read") && <Link to={`/erp/financeiro/pedidos/${enc}`}>Ver no financeiro</Link>}
+          </div>
+        </div>
+        <p className="erp-muted">
+          Responsável: {op?.responsible.name ?? op?.responsible.sellerId ?? "—"} · rascunhos e seleções locais não
+          significam nota emitida, frete contratado nem pagamento confirmado.
+        </p>
+      </section>
+      <section className="erp-card" aria-label="Histórico do pedido">
+        <h3>Histórico</h3>
+        {history.isLoading && <StatePanel kind="loading" />}
+        {history.error && (
+          <StatePanel kind="error" message={(history.error as Error).message} onRetry={() => void history.refetch()} />
+        )}
+        {history.data && history.data.items.length === 0 && (
+          <p className="erp-muted">Nenhuma ação humana registrada neste pedido. Atualizações do Mercos não entram aqui.</p>
+        )}
+        {history.data && history.data.items.length > 0 && (
+          <ol className="erp-timeline">
+            {history.data.items.map((entry) => (
+              <li key={`${entry.at}-${entry.action}-${entry.operator}`}>
+                <strong>{entry.action}</strong>
+                <span>
+                  {formatInstant(entry.at)} · por {entry.operator}
+                  {entry.kind === "external_request" ? ` · solicitação externa: ${entry.result ?? "—"}` : ""}
+                  {entry.reason ? ` · ${entry.reason}` : ""}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </>
+  );
+}
+
 export function OrderDetailPage() {
   const { id = "" } = useParams();
   const { can, capability } = useErp();
   const [editing, setEditing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const query = useErpQuery(["order", id], `/sales-orders/${encodeURIComponent(id)}`, orderDetailSchema);
   const write = capability("write.orders");
   const cancel = capability("write.order_cancel");
@@ -216,6 +341,7 @@ export function OrderDetailPage() {
   const o = query.data;
   if (!o) return null;
   const canEdit = can("orders:write") && Boolean(write?.enabled) && o.itemsComplete && o.kind !== "cancelled";
+  const canCancel = can("orders:cancel") && Boolean(cancel?.enabled) && o.itemsComplete && o.kind !== "cancelled";
 
   return (
     <>
@@ -232,6 +358,11 @@ export function OrderDetailPage() {
                 {editing ? "Fechar edição" : "Editar"}
               </button>
             )}
+            {canCancel && (
+              <button type="button" className="erp-btn" onClick={() => setCancelling((v) => !v)}>
+                {cancelling ? "Fechar cancelamento" : "Cancelar pedido…"}
+              </button>
+            )}
           </>
         }
       />
@@ -243,6 +374,7 @@ export function OrderDetailPage() {
           são controlados separadamente no ERP.
         </p>
       </section>
+      <OrderOperations order={o} />
       {!o.itemsComplete && (
         <div className="erp-notice">
           <strong>Pedido incompleto</strong>
@@ -253,6 +385,7 @@ export function OrderDetailPage() {
       <CapabilityNotice capability={cancel} />
       <CapabilityNotice capability={billing} />
       {editing && canEdit && <EditPanel order={o} onClose={() => setEditing(false)} />}
+      {cancelling && canCancel && <CancelPanel order={o} onClose={() => setCancelling(false)} />}
       <section className="erp-card">
         <h3>Resumo</h3>
         <Dl

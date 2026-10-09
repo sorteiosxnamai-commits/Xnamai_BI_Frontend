@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { useCommand, useErpQuery } from "../api/hooks";
 import { sessionsSchema } from "../api/schemas";
 import { ChangePasswordForm } from "../auth/ChangePasswordForm";
@@ -6,7 +7,6 @@ import { useErp } from "../auth/context";
 import { StatePanel } from "../components/StatePanel";
 import { CommandError, PageHeader } from "../components/ui";
 import { formatInstant } from "../format";
-import { z } from "zod";
 
 export function AccountPage() {
   const { me } = useErp();

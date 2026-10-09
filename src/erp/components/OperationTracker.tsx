@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useErpQuery } from "../api/hooks";
-import { operationDetailSchema, type OperationStatus } from "../api/schemas";
+import { type OperationStatus, operationDetailSchema } from "../api/schemas";
 import { formatInstant } from "../format";
 import { StatePanel } from "./StatePanel";
 

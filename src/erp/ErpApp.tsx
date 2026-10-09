@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazyPage } from "../app/lazyPage";
-import { AppearanceSelect } from "../theme/AppearanceSelect";
 import { ErpGuard } from "./auth/ErpGuard";
-import { useErp } from "./auth/context";
+import { ErpShell } from "./components/ErpShell";
 import { ErpErrorBoundary } from "./components/ErrorBoundary";
 import { StatePanel } from "./components/StatePanel";
 import "./erp.css";
+import "./erp-panel.css";
 
 const OverviewPage = lazyPage(() =>
   import("./features/OverviewPage").then((m) => ({ default: m.OverviewPage })),
@@ -60,104 +60,88 @@ const AdminPage = lazyPage(() =>
   import("./features/AdminPage").then((m) => ({ default: m.AdminPage })),
 );
 
-type NavItem = { to: string; label: string; icon: string; permission?: string; end?: boolean };
+const SettingsPage = lazyPage(() =>
+  import("./features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
+const ShippingPage = lazyPage(() =>
+  import("./features/shipping/ShippingPage").then((m) => ({ default: m.ShippingPage })),
+);
+const ShippingQuotePage = lazyPage(() =>
+  import("./features/shipping/ShippingQuotePage").then((m) => ({ default: m.ShippingQuotePage })),
+);
+const InvoiceListPage = lazyPage(() =>
+  import("./features/fiscal/InvoiceListPage").then((m) => ({ default: m.InvoiceListPage })),
+);
+const InvoiceDraftPage = lazyPage(() =>
+  import("./features/fiscal/InvoiceDraftPage").then((m) => ({ default: m.InvoiceDraftPage })),
+);
+const OrderFinancePage = lazyPage(() =>
+  import("./features/finance/OrderFinancePage").then((m) => ({ default: m.OrderFinancePage })),
+);
+const RefundsPage = lazyPage(() =>
+  import("./features/refunds/RefundsPage").then((m) => ({ default: m.RefundsPage })),
+);
 
-const NAV: NavItem[] = [
-  { to: "/erp", label: "Visão operacional", icon: "⌂", end: true },
-  { to: "/erp/clientes", label: "Clientes", icon: "◎" },
-  { to: "/erp/produtos", label: "Produtos", icon: "◇" },
-  { to: "/erp/pedidos", label: "Pedidos e orçamentos", icon: "▣" },
-  { to: "/erp/cadastros", label: "Cadastros auxiliares", icon: "▤" },
-  { to: "/erp/externos", label: "Títulos, pagamentos, comissões", icon: "$", permission: "financial_links:read" },
-  { to: "/erp/compras", label: "Compras e fornecedores", icon: "⇩", permission: "purchases:read" },
-  { to: "/erp/estoque", label: "Estoque", icon: "▥", permission: "inventory:read" },
-  { to: "/erp/financeiro", label: "Financeiro", icon: "₢", permission: "finance:read" },
-  { to: "/erp/integracoes", label: "Integrações", icon: "↻", permission: "integration:read" },
-  { to: "/erp/capacidades", label: "Capacidades", icon: "✓" },
-  { to: "/erp/admin", label: "Administração", icon: "♙", permission: "*" },
-  { to: "/erp/conta", label: "Minha conta", icon: "☺" },
+const SETTINGS_PATHS = [
+  "/erp/integracoes",
+  "/erp/capacidades",
+  "/erp/admin",
+  "/erp/clientes",
+  "/erp/produtos",
+  "/erp/cadastros",
+  "/erp/compras",
+  "/erp/estoque",
+  "/erp/externos",
 ];
 
-function Shell() {
-  const { me, can, signOut } = useErp();
-  const location = useLocation();
-  const items = NAV.filter((item) => !item.permission || can(item.permission));
-  const current =
-    items.find((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)))
-      ?.label ?? "ERP Xnamai";
+/** Páginas que passaram a viver em Configurações mantêm a URL e ganham o caminho de volta. */
+function SettingsCrumb() {
+  const { pathname } = useLocation();
+  if (!SETTINGS_PATHS.some((prefix) => pathname.startsWith(prefix))) return null;
   return (
-    <div className="new-app erp-app">
-      <a className="skip-link" href="#erp-content">
-        Ir para o conteúdo
-      </a>
-      <aside className="app-sidebar">
-        <div className="brand-block">
-          <strong>XNAMAI</strong>
-          <span>ERP · Gestão operacional</span>
-        </div>
-        <nav aria-label="ERP">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => (isActive ? "active" : "")}
-            >
-              <i>{item.icon}</i>
-              {item.label}
-            </NavLink>
-          ))}
-          <NavLink to="/">
-            <i>&lt;</i>
-            Início
-          </NavLink>
-        </nav>
-      </aside>
-      <main id="erp-content" className="app-content">
-        <header className="app-header">
-          <div>
-            <small>ERP · CONEXÃO {me.connectionId.toUpperCase()}</small>
-            <h1>{current}</h1>
-            <p>Dados espelhados do Mercos via Adaptor; escritas só após confirmação.</p>
-          </div>
-          <div className="user-menu">
-            <AppearanceSelect />
-            <span>
-              {me.username} · {me.roles.join(", ") || "sem papel"}
-            </span>
-            <button type="button" onClick={() => void signOut()}>
-              Sair
-            </button>
-          </div>
-        </header>
-        <div className="route-content erp-content">
-          <ErpErrorBoundary>
-            <Suspense fallback={<StatePanel kind="loading" />}>
-              <Routes>
-                <Route path="/erp" element={<OverviewPage />} />
-                <Route path="/erp/clientes" element={<CustomersPage />} />
-                <Route path="/erp/clientes/:id" element={<CustomerDetailPage />} />
-                <Route path="/erp/produtos" element={<ProductsPage />} />
-                <Route path="/erp/produtos/:id" element={<ProductDetailPage />} />
-                <Route path="/erp/pedidos" element={<OrdersPage />} />
-                <Route path="/erp/pedidos/novo" element={<OrderCreatePage />} />
-                <Route path="/erp/pedidos/:id" element={<OrderDetailPage />} />
-                <Route path="/erp/cadastros" element={<CatalogsPage />} />
-                <Route path="/erp/externos" element={<ExternalPage />} />
-                <Route path="/erp/compras" element={<PurchasingPage />} />
-                <Route path="/erp/estoque" element={<InventoryPage />} />
-                <Route path="/erp/financeiro" element={<FinancePage />} />
-                <Route path="/erp/integracoes" element={<IntegrationPage />} />
-                <Route path="/erp/capacidades" element={<CapabilitiesPage />} />
-                <Route path="/erp/admin" element={<AdminPage />} />
-                <Route path="/erp/conta" element={<AccountPage />} />
-                <Route path="/erp/*" element={<Navigate to="/erp" replace />} />
-              </Routes>
-            </Suspense>
-          </ErpErrorBoundary>
-        </div>
-      </main>
-    </div>
+    <nav className="erp-crumb" aria-label="Você está em">
+      <Link to="/erp/configuracoes">Configurações</Link>
+      <span aria-hidden="true"> › </span>
+    </nav>
+  );
+}
+
+function Shell() {
+  return (
+    <ErpShell>
+      <SettingsCrumb />
+      <ErpErrorBoundary>
+        <Suspense fallback={<StatePanel kind="loading" />}>
+          <Routes>
+            <Route path="/erp" element={<OverviewPage />} />
+            <Route path="/erp/pedidos" element={<OrdersPage />} />
+            <Route path="/erp/pedidos/novo" element={<OrderCreatePage />} />
+            <Route path="/erp/pedidos/:id" element={<OrderDetailPage />} />
+            <Route path="/erp/notas-fiscais" element={<InvoiceListPage />} />
+            <Route path="/erp/notas-fiscais/pedidos/:id/montagem" element={<InvoiceDraftPage />} />
+            <Route path="/erp/frete" element={<ShippingPage />} />
+            <Route path="/erp/frete/pedidos/:id/cotacao" element={<ShippingQuotePage />} />
+            <Route path="/erp/financeiro" element={<FinancePage />} />
+            <Route path="/erp/financeiro/pedidos/:id" element={<OrderFinancePage />} />
+            <Route path="/erp/reembolsos" element={<RefundsPage />} />
+            <Route path="/erp/configuracoes" element={<SettingsPage />} />
+            <Route path="/erp/clientes" element={<CustomersPage />} />
+            <Route path="/erp/clientes/:id" element={<CustomerDetailPage />} />
+            <Route path="/erp/produtos" element={<ProductsPage />} />
+            <Route path="/erp/produtos/:id" element={<ProductDetailPage />} />
+            <Route path="/erp/cadastros" element={<CatalogsPage />} />
+            <Route path="/erp/externos" element={<ExternalPage />} />
+            <Route path="/erp/compras" element={<PurchasingPage />} />
+            <Route path="/erp/estoque" element={<InventoryPage />} />
+            <Route path="/erp/integracoes" element={<IntegrationPage />} />
+            <Route path="/erp/capacidades" element={<CapabilitiesPage />} />
+            <Route path="/erp/admin" element={<AdminPage />} />
+            <Route path="/erp/conta" element={<AccountPage />} />
+            <Route path="/erp/*" element={<Navigate to="/erp" replace />} />
+          </Routes>
+        </Suspense>
+      </ErpErrorBoundary>
+    </ErpShell>
   );
 }
 

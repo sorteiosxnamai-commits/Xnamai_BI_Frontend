@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ReactNode } from "react";
+import { type ReactNode, useCallback, useRef } from "react";
 import { ErpApiError } from "../api/client";
 import type { Capability } from "../api/schemas";
 
@@ -14,7 +14,7 @@ export function PageHeader({
   return (
     <div className="erp-page-head">
       <div>
-        <h2>{title}</h2>
+        <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
       </div>
       {actions && <div className="erp-page-actions">{actions}</div>}

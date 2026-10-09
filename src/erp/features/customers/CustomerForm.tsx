@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
-import { useInvalidateErp, useCommand } from "../../api/hooks";
-import { operationSchema, type CustomerDetail } from "../../api/schemas";
+import { type FormEvent, useState } from "react";
+import { useCommand, useInvalidateErp } from "../../api/hooks";
+import { type CustomerDetail, operationSchema } from "../../api/schemas";
 import { OperationTracker } from "../../components/OperationTracker";
 import { CommandError, FieldError, useFocusInvalid } from "../../components/ui";
 import { isValidDocument } from "../../format";

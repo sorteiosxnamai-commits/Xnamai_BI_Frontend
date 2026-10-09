@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useErp } from "../../auth/context";
 import { useErpQuery } from "../../api/hooks";
 import { customerDetailSchema } from "../../api/schemas";
+import { useErp } from "../../auth/context";
 import { StatePanel } from "../../components/StatePanel";
 import { Badge, CapabilityNotice, Dl, PageHeader } from "../../components/ui";
 import { formatInstant, formatMoney } from "../../format";

@@ -1,10 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import type { z } from "zod";
-import { buildQuery } from "../api/client";
+import { buildQuery, ErpApiError } from "../api/client";
 import { useErpQuery } from "../api/hooks";
 import type { Page } from "../api/schemas";
 import { StatePanel } from "./StatePanel";
-import { ErpApiError } from "../api/client";
 
 export type Column<T> = {
   key: string;
@@ -73,6 +72,13 @@ export function ServerList<T>({
     }, 300);
     return () => window.clearTimeout(timer);
   }, [values]);
+
+  // Busca, período e filtros externos (fixedParams) mudaram: volta para a página 1.
+  const fixedKey = JSON.stringify(fixedParams ?? {});
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fixedKey só dispara o retorno à página 1
+  useEffect(() => {
+    setPage(1);
+  }, [fixedKey]);
 
   const params = { ...fixedParams, ...applied, page, page_size: pageSize, sort, order };
   const query = useErpQuery<Page<T>>(

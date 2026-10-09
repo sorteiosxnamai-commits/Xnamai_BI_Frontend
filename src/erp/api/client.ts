@@ -103,6 +103,39 @@ export async function erpRequest<T>(
   }
 }
 
+/**
+ * Baixa um arquivo (ex.: relatório CSV) com a mesma sessão e a mesma renovação de login das demais
+ * chamadas. Devolve o Blob e se o servidor avisou que o relatório foi truncado.
+ */
+export async function erpDownload(path: string): Promise<{ blob: Blob; truncated: boolean }> {
+  const base = apiUrl();
+  if (!base) throw new ErpApiError(0, "not_configured", "VITE_BI_API_URL não configurada");
+  const url = `${base}/api/v1/erp${path}`;
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 60_000);
+  try {
+    let response = await send(url, {}, controller.signal);
+    if (response.status === 401) {
+      const renewed = erpAccessToken() ? await erpRefresh() : await refreshSession();
+      if (renewed) response = await send(url, {}, controller.signal);
+      if (!renewed && response.status === 401) {
+        window.dispatchEvent(new Event(ERP_AUTH_EXPIRED));
+        throw new ErpApiError(401, "session_expired", "Sessão expirada. Entre novamente para continuar.");
+      }
+    }
+    if (!response.ok) throw normalizeError(response.status, await response.text());
+    return { blob: await response.blob(), truncated: response.headers.get("X-Report-Truncated") === "true" };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ErpApiError(0, "timeout", "Tempo esgotado ao gerar o relatório");
+    }
+    if (error instanceof TypeError) throw new ErpApiError(0, "network", "Falha de rede ao baixar o relatório");
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 export function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

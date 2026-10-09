@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { ErpGuard } from "./ErpGuard";
 import { cap, mockFetch } from "../test/utils";
+import { ErpGuard } from "./ErpGuard";
 import { clearErpSession } from "./erpSession";
 
 const auth = vi.hoisted(() => ({

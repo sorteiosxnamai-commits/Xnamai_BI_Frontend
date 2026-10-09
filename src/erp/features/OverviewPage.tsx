@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
+import { buildQuery } from "../api/client";
 import { useErpQuery } from "../api/hooks";
-import { overviewSchema } from "../api/schemas";
-import { Badge, PageHeader } from "../components/ui";
+import { operationalSummarySchema, overviewSchema } from "../api/schemas";
 import { StatePanel } from "../components/StatePanel";
-import { formatInstant } from "../format";
+import { Badge, PageHeader } from "../components/ui";
+import { formatInstant, formatMoney } from "../format";
+import { periodLabel, useScope } from "../scope";
 
 const OPERATION_LABELS: [string, string][] = [
   ["queued", "Na fila"],
@@ -19,6 +21,63 @@ const OPERATION_LABELS: [string, string][] = [
  * Visão operacional: dado indisponível nunca vira zero. Os números abaixo são
  * do espelho ERP e das filas, não KPIs do BI e não são saldo financeiro.
  */
+function OrdersSummary() {
+  const { from, to } = useScope();
+  const params = { dateFrom: from, dateTo: to };
+  const summary = useErpQuery(
+    ["overview-orders", params],
+    `/operational-summary${buildQuery(params)}`,
+    operationalSummarySchema,
+    { keepPrevious: true },
+  );
+  const s = summary.data;
+  if (summary.isLoading) return <StatePanel kind="loading" />;
+  if (summary.error || !s) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Resumo de pedidos indisponível"
+        message={(summary.error as Error | null)?.message}
+        onRetry={() => void summary.refetch()}
+      />
+    );
+  }
+  return (
+    <section aria-label="Resumo de pedidos">
+      <div className="erp-kpis">
+        <div className="erp-kpi erp-kpi-ok">
+          <span className="erp-kpi-title">Pedidos · {periodLabel(from, to)}</span>
+          <strong>{s.orders.count}</strong>
+          <small>
+            {s.variation.available
+              ? `${s.variation.percent?.replace(".", ",")}% vs. período anterior`
+              : `Variação indisponível: ${s.variation.reason ?? "sem base de comparação"}`}
+          </small>
+        </div>
+        <div className="erp-kpi erp-kpi-info">
+          <span className="erp-kpi-title">Valor vendido (líquido)</span>
+          <strong>{formatMoney(s.values.net)}</strong>
+          <small>{s.values.note}</small>
+        </div>
+        <div className="erp-kpi erp-kpi-purple">
+          <span className="erp-kpi-title">Atualizações pendentes</span>
+          <strong>{s.pendencies.any}</strong>
+          <small>
+            {s.pendencies.itemsIncomplete} sem itens · {s.pendencies.customerMissing} sem cliente
+          </small>
+        </div>
+        <div className="erp-kpi">
+          <span className="erp-kpi-title">Cobertura da importação</span>
+          <strong className={s.coverage.complete ? undefined : "erp-kpi-unavailable"}>
+            {s.coverage.complete ? "Completa" : "Parcial"}
+          </strong>
+          <small>{s.coverage.note ?? "Pedidos e clientes sincronizados."}</small>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function OverviewPage() {
   const query = useErpQuery(["overview"], "/overview", overviewSchema, {
     refetchInterval: 30_000,
@@ -35,9 +94,10 @@ export function OverviewPage() {
   return (
     <>
       <PageHeader
-        title="Visão operacional"
-        subtitle="Estado do espelho Mercos, das operações de escrita e das pendências que pedem decisão."
+        title="Visão Geral"
+        subtitle="Pedidos no período, estado do espelho Mercos, das operações de escrita e das pendências que pedem decisão."
       />
+      <OrdersSummary />
       <div className="erp-card">
         <p className="erp-muted">
           Fonte: {data.source} · gerado em {formatInstant(data.generatedAt)} ·{" "}

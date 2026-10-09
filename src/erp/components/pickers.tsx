@@ -3,14 +3,14 @@ import type { ZodType } from "zod";
 import { buildQuery } from "../api/client";
 import { useErpQuery } from "../api/hooks";
 import {
-  catalogEntrySchema,
-  customerSchema,
-  pageOf,
-  productSchema,
   type CatalogEntry,
   type Customer,
+  catalogEntrySchema,
+  customerSchema,
   type Page,
   type Product,
+  pageOf,
+  productSchema,
 } from "../api/schemas";
 
 function useDebounced<V>(value: V, ms = 300): V {

@@ -61,6 +61,14 @@ export function parseQuantityInput(text: string): string | null {
   return Number(raw) > 0 ? raw : null;
 }
 
+/** Decimal positivo com no máximo `decimals` casas (aceita vírgula). Devolve "1.25" ou null. */
+export function parsePositiveDecimal(text: string, decimals: number): string | null {
+  const raw = text.trim().replace(",", ".");
+  const pattern = new RegExp(`^[0-9]+([.][0-9]{1,${decimals}})?$`);
+  if (!pattern.test(raw)) return null;
+  return Number(raw) > 0 ? raw : null;
+}
+
 /** Documentos alfanuméricos são válidos: não se removem letras. */
 export function isValidDocument(text: string): boolean {
   return /^[A-Za-z0-9./\- ]{3,40}$/.test(text.trim());

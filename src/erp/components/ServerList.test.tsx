@@ -2,9 +2,9 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ZodType } from "zod";
-import { customerSchema, pageOf, type Customer, type Page } from "../api/schemas";
+import { type Customer, customerSchema, type Page, pageOf } from "../api/schemas";
 import { mockFetch, page, renderErp } from "../test/utils";
-import { ServerList, type Column } from "./ServerList";
+import { type Column, ServerList } from "./ServerList";
 
 const schema = pageOf(customerSchema) as unknown as ZodType<Page<Customer>>;
 const row = (id: string, name: string): Record<string, unknown> => ({

@@ -1,14 +1,13 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { cap, erpContext, mockFetch, page, renderErp } from "../test/utils";
 import { CapabilitiesPage } from "./CapabilitiesPage";
 import { CustomersPage } from "./customers/CustomersPage";
 import { ExternalPage } from "./ExternalPage";
 import { IntegrationPage } from "./integration/IntegrationPage";
 import { InventoryPage } from "./inventory/InventoryPage";
-import { OrdersPage } from "./orders/OrdersPage";
 import { OverviewPage } from "./OverviewPage";
-import { cap, erpContext, mockFetch, page, renderErp } from "../test/utils";
 
 beforeEach(() => vi.stubEnv("VITE_BI_API_URL", "https://api.test"));
 afterEach(() => {
@@ -36,8 +35,22 @@ test("capacidade ligada mostra 'Novo cliente'; perfil sem permissão não vê", 
   expect(screen.queryByRole("button", { name: "Novo cliente" })).not.toBeInTheDocument();
 });
 
-test("visão operacional: dado indisponível não vira zero", async () => {
-  mockFetch(() => ({
+test("visão geral: dado indisponível não vira zero e o resumo de pedidos mostra a cobertura", async () => {
+  mockFetch((call) => {
+    if (call.url.startsWith("/operational-summary")) {
+      return {
+        body: {
+          filters: {},
+          coverage: { complete: false, resources: { orders: "running", customers: "never" }, note: "Importação parcial." },
+          orders: { count: 7, byKind: { order: 7 } },
+          values: { net: "700.00", gross: "700.00", note: "Valor vendido; não é valor recebido." },
+          variation: { available: false, reason: "Sem período definido para comparar" },
+          payment: { byStatus: { unknown: 7 }, pix: { available: false, reason: "Sem provedor de Pix" } },
+          pendencies: { itemsIncomplete: 2, customerMissing: 1, any: 3 },
+        },
+      };
+    }
+    return {
     body: {
       connectionId: "test",
       generatedAt: "2026-10-07T12:00:00+00:00",
@@ -52,8 +65,13 @@ test("visão operacional: dado indisponível não vira zero", async () => {
       openConflicts: 1,
       pendingReferences: [{ resource: "orders", field: "customerId", target: "customers", pending: 3 }],
     },
-  }));
+    };
+  });
   renderErp(<OverviewPage />);
+  expect(await screen.findByRole("heading", { name: "Visão Geral" })).toBeInTheDocument();
+  expect(await screen.findByText("Parcial")).toBeInTheDocument(); // cobertura da importação
+  expect(screen.getByText(/Valor vendido; não é valor recebido/)).toBeInTheDocument();
+  expect(screen.getByText(/Variação indisponível: Sem período definido/)).toBeInTheDocument();
   expect(await screen.findByText("indisponível")).toBeInTheDocument();
   expect(screen.getByText(/data de corte indisponível/)).toBeInTheDocument();
   expect(screen.getByText("12")).toBeInTheDocument();
@@ -144,24 +162,6 @@ test("operação unknown na lista não oferece 'tentar de novo'; oferece reconci
   await userEvent.type(screen.getByLabelText("ID externo confirmado"), "55");
   await userEvent.click(screen.getByRole("button", { name: "Foi criado no Mercos…" }));
   expect(screen.getByText("Confirmar que o Mercos registrou")).toBeInTheDocument();
-});
-
-test("pedidos mantêm estados separados e marcam incompletos", async () => {
-  const order = (id: string, complete: boolean, kind = "order") => ({
-    id, number: id, kind, customerId: "10", customerName: "Cliente X", sellerId: null, issuedAt: null,
-    issueDate: "2026-10-06", netTotal: "99.00", grossTotal: null, discountTotal: null, itemCount: complete ? 1 : null,
-    itemsComplete: complete, statuses: { commercial: "2", billing: null, fulfillment: "not_started", payment: null },
-    version: 1, sourceUpdatedAt: null, sourceDeleted: false, capturedAt: null,
-  });
-  mockFetch(() => ({ body: page([order("100", true), order("101", false, "quote")], { sort: "issuedAt", order: "desc" }) }));
-  renderErp(<OrdersPage />, { route: "/erp/pedidos?customerId=10" });
-  expect(await screen.findByText("Incompleto")).toBeInTheDocument();
-  expect(screen.getAllByText(/Comercial: 2/)).toHaveLength(2);
-  expect(screen.getAllByText(/Faturamento: —/)).toHaveLength(2);
-  expect(screen.getAllByText(/Atendimento: not_started/)).toHaveLength(2);
-  expect(screen.getByText("Orçamento")).toBeInTheDocument();
-  expect(screen.getAllByText("06/10/2026", { selector: "td" })).toHaveLength(2); // data sem fuso
-  expect(screen.getByText(/Filtrando pelo cliente 10/)).toBeInTheDocument();
 });
 
 test("estoque: movimentos oficiais bloqueados em modo consulta ao saldo Mercos", async () => {

@@ -185,6 +185,269 @@ export const orderStatusesSchema = obj({
   payment: nstr,
 });
 
+/** Estado de uma fonte local/externa: `unavailable` = sem fonte; `unknown` = fonte sem dado. */
+export const stateRefSchema = obj({
+  state: z.string(),
+  label: nstr,
+  reason: nstr,
+  source: nstr,
+  quoteId: z.number().nullable().optional(),
+  draftId: z.number().nullable().optional(),
+  price: money,
+  deadline: nstr,
+});
+export type StateRef = z.infer<typeof stateRefSchema>;
+
+export const operationalSchema = obj({
+  customerName: nstr,
+  responsible: obj({ sellerId: nstr, name: nstr }),
+  state: obj({ code: z.string(), label: z.string() }),
+  itemsPreview: z.array(obj({ name: nstr, code: nstr, quantity: nstr })),
+  totals: obj({ gross: money, discount: money, freight: money, net: money }),
+  pendencies: z.array(obj({ code: z.string(), label: z.string() })),
+  lastExternalUpdateAt: nstr,
+  lastHumanAction: obj({ at: nstr, operator: nstr, action: nstr }).nullable().optional(),
+  shipping: stateRefSchema,
+  invoice: stateRefSchema,
+  payment: stateRefSchema,
+  pix: stateRefSchema,
+  finance: stateRefSchema.optional(),
+});
+export type Operational = z.infer<typeof operationalSchema>;
+
+const summarySection = obj({
+  available: z.boolean(),
+  reason: nstr,
+  counts: z.record(z.string(), z.number()).optional(),
+});
+
+export const operationalSummarySchema = obj({
+  filters: z.record(z.string(), z.unknown()),
+  coverage: obj({ complete: z.boolean(), resources: z.record(z.string(), z.string()), note: nstr }),
+  orders: obj({ count: z.number(), byKind: z.record(z.string(), z.number()) }),
+  values: obj({ net: money, gross: money, note: nstr }),
+  variation: obj({ available: z.boolean(), reason: nstr, percent: nstr, previousNet: money }),
+  payment: obj({
+    byStatus: z.record(z.string(), z.number()),
+    pix: obj({ available: z.boolean(), reason: nstr }),
+  }),
+  pendencies: obj({ itemsIncomplete: z.number(), customerMissing: z.number(), any: z.number() }),
+  shipping: summarySection.optional(),
+  invoice: summarySection.optional(),
+  filtersAvailable: z.array(z.string()).optional(),
+});
+export type OperationalSummary = z.infer<typeof operationalSummarySchema>;
+
+export const shippingOptionSchema = obj({
+  id: z.number(),
+  carrier: z.string(),
+  service: z.string(),
+  price: money,
+  deadlineMinDays: z.number().nullable().optional(),
+  deadlineMaxDays: z.number().nullable().optional(),
+  validUntil: nstr,
+  expired: z.boolean(),
+  tracking: z.boolean().nullable().optional(),
+  pickupMode: nstr,
+  notes: nstr,
+  source: z.string(),
+  createdBy: z.string(),
+  createdAt: nstr,
+});
+export type ShippingOption = z.infer<typeof shippingOptionSchema>;
+
+export const shippingQuoteSchema = obj({
+  id: z.number(),
+  orderId: z.string(),
+  status: z.string(),
+  stale: z.boolean(),
+  staleReason: nstr,
+  source: z.string(),
+  version: z.number(),
+  orderVersion: z.number(),
+  originZip: nstr,
+  destination: obj({ zip: nstr, city: nstr, state: nstr }),
+  declaredValue: money,
+  volumes: z.array(
+    obj({ position: z.number(), weightKg: z.string(), lengthCm: z.string(), widthCm: z.string(), heightCm: z.string() }),
+  ),
+  totals: obj({ volumes: z.number(), weightKg: z.string(), cubageM3: z.string(), items: z.number() }),
+  items: z.array(obj({ position: z.number(), productId: nstr, code: nstr, name: nstr, quantity: nstr })),
+  options: z.array(shippingOptionSchema),
+  selectedOptionId: z.number().nullable().optional(),
+  selectedAt: nstr,
+  selectedBy: nstr,
+  selectionReason: nstr,
+  notes: nstr,
+  createdBy: z.string(),
+  createdAt: nstr,
+  statement: z.string(),
+});
+export type ShippingQuote = z.infer<typeof shippingQuoteSchema>;
+
+export const shippingListSchema = obj({
+  orderId: z.string(),
+  provider: obj({ available: z.boolean(), reason: nstr }),
+  items: z.array(shippingQuoteSchema),
+});
+
+export const invoiceChangeSchema = obj({
+  sourceKey: z.string(),
+  kind: z.string(),
+  name: nstr,
+  before: z.record(z.string(), z.unknown()).nullable().optional(),
+  after: z.record(z.string(), z.unknown()).nullable().optional(),
+  valueDifference: money,
+  reason: nstr,
+});
+
+export const invoiceDraftSchema = obj({
+  id: z.number(),
+  orderId: z.string(),
+  status: z.string(),
+  version: z.number(),
+  stale: z.boolean(),
+  percent: z.string(),
+  orderTotal: money,
+  target: obj({ percent: z.string(), value: money }),
+  effective: obj({ value: money, percentOfOrder: nstr, achievedOfTarget: nstr }),
+  difference: obj({ value: money, direction: z.string() }),
+  counts: obj({ included: z.number(), total: z.number() }),
+  items: z.array(
+    obj({
+      sourceKey: z.string(),
+      position: z.number(),
+      productId: nstr,
+      code: nstr,
+      name: nstr,
+      sourceQuantity: z.string(),
+      unitValue: money,
+      sourceLineTotal: money,
+      quantity: z.string(),
+      lineValue: money,
+      allocatedElsewhere: z.string(),
+      available: z.string(),
+      included: z.boolean(),
+      status: z.string(),
+    }),
+  ),
+  review: obj({ required: z.boolean(), changes: z.array(invoiceChangeSchema), note: nstr }),
+  notes: nstr,
+  issuance: obj({ available: z.boolean(), reason: nstr }),
+  statement: z.string(),
+  organizeNote: z.string(),
+  createdBy: z.string(),
+  createdAt: nstr,
+});
+export type InvoiceDraft = z.infer<typeof invoiceDraftSchema>;
+
+export const invoiceListSchema = obj({
+  orderId: z.string(),
+  issuance: obj({ available: z.boolean(), reason: nstr }),
+  items: z.array(invoiceDraftSchema),
+});
+
+const unavailable = obj({ available: z.boolean(), reason: nstr });
+const variation = obj({ available: z.boolean(), reason: nstr, percent: nstr, previous: money });
+
+export const financeSummarySchema = obj({
+  period: obj({ from: nstr, to: nstr }),
+  sales: obj({ orders: z.number(), net: money, variation }),
+  cash: obj({ received: money, reversed: money, net: money, variation }),
+  receivable: obj({ open: money, overdue: money }),
+  refunds: obj({
+    byStatus: z.record(z.string(), obj({ count: z.number(), amount: money })),
+    returned: money,
+  }),
+  pix: unavailable,
+  formulas: z.record(z.string(), z.string()),
+});
+export type FinanceSummary = z.infer<typeof financeSummarySchema>;
+
+export const orderFinanceSchema = obj({
+  orderId: z.string(),
+  orderTotal: money,
+  state: z.string(),
+  overdue: z.boolean(),
+  obligation: money,
+  paid: money,
+  open: money,
+  titles: z.array(
+    obj({
+      id: z.number(),
+      status: z.string(),
+      total: money,
+      origin: z.string(),
+      installments: z.array(
+        obj({
+          id: z.number(),
+          number: z.number(),
+          dueDate: z.string(),
+          amount: money,
+          settledAmount: money,
+          status: z.string(),
+          overdue: z.boolean(),
+        }),
+      ),
+    }),
+  ),
+  payments: z.array(
+    obj({
+      settlementId: z.number(),
+      titleId: z.number(),
+      installmentId: z.number(),
+      amount: money,
+      settledAt: nstr,
+      operator: z.string(),
+      reference: nstr,
+      reversed: z.boolean(),
+      refundable: money,
+      refundCommitted: money,
+    }),
+  ),
+  externalTitles: z.array(obj({ id: z.string(), amount: money, status: nstr, dueDate: nstr })),
+  externalNote: nstr,
+  pix: unavailable,
+});
+export type OrderFinance = z.infer<typeof orderFinanceSchema>;
+
+export const refundSchema = obj({
+  id: z.number(),
+  orderId: z.string(),
+  settlementId: z.number(),
+  amount: money,
+  reason: z.string(),
+  status: z.string(),
+  version: z.number(),
+  requestedBy: z.string(),
+  requestedAt: nstr,
+  decidedBy: nstr,
+  decidedAt: nstr,
+  decisionNote: nstr,
+  externalReference: nstr,
+  externalConfirmedBy: nstr,
+  externalConfirmedAt: nstr,
+  reversalSettlementId: z.number().nullable().optional(),
+  statement: z.string(),
+  events: z
+    .array(obj({ at: nstr, operator: z.string(), action: z.string(), reason: nstr }))
+    .optional(),
+});
+export type Refund = z.infer<typeof refundSchema>;
+
+export const orderHistorySchema = obj({
+  items: z.array(
+    obj({
+      at: nstr,
+      kind: z.string(),
+      operator: z.string(),
+      action: z.string(),
+      result: nstr,
+      reason: nstr,
+    }),
+  ),
+});
+
 export const orderSchema = obj({
   id: z.string(),
   number: nstr,
@@ -200,6 +463,7 @@ export const orderSchema = obj({
   itemCount: z.number().nullable().optional(),
   itemsComplete: z.boolean(),
   statuses: orderStatusesSchema,
+  operational: operationalSchema.optional(),
   ...metaShape,
 });
 export type Order = z.infer<typeof orderSchema>;

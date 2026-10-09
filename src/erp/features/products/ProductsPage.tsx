@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import type { ZodType } from "zod";
+import { type Page, type Product, pageOf, productSchema } from "../../api/schemas";
 import { useErp } from "../../auth/context";
-import { pageOf, productSchema, type Page, type Product } from "../../api/schemas";
-import { ServerList, type Column, type FilterDef } from "../../components/ServerList";
+import { type Column, type FilterDef, ServerList } from "../../components/ServerList";
 import { Badge, CapabilityNotice, PageHeader } from "../../components/ui";
 import { formatMoney, formatQuantity } from "../../format";
 

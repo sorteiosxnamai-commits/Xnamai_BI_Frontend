@@ -3,8 +3,8 @@ import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
-import { ErpContext, type ErpContextValue } from "../auth/context";
 import type { Capability } from "../api/schemas";
+import { ErpContext, type ErpContextValue } from "../auth/context";
 
 export const CONNECTION = "test";
 

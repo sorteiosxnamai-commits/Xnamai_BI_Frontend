@@ -1,16 +1,15 @@
 import { useState } from "react";
-import type { ZodType } from "zod";
+import type { ZodType, z } from "zod";
 import {
+  type CatalogEntry,
   catalogEntrySchema,
+  type Page,
   pageOf,
   productPriceRowSchema,
-  type CatalogEntry,
-  type Page,
 } from "../api/schemas";
-import { ServerList, type Column } from "../components/ServerList";
+import { type Column, ServerList } from "../components/ServerList";
 import { Badge, PageHeader, Tabs } from "../components/ui";
 import { formatDay, formatMoney, formatQuantity } from "../format";
-import type { z } from "zod";
 
 const catalogSchema = pageOf(catalogEntrySchema) as unknown as ZodType<Page<CatalogEntry>>;
 type PriceRow = z.infer<typeof productPriceRowSchema>;

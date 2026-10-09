@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { OperationTracker, pollDelay } from "./OperationTracker";
 import { mockFetch, renderErp } from "../test/utils";
+import { OperationTracker, pollDelay } from "./OperationTracker";
 
 const base = {
   operationId: "11111111-2222-3333-4444-555555555555",
