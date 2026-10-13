@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { type ZodType, z } from "zod";
 import { useCommand, useErpQuery, useInvalidateErp } from "../../api/hooks";
@@ -211,6 +211,12 @@ function OrdersDiagnosticsTab() {
             ["Motivo (com evidência)", gap.reason ?? "—"],
             ["Pedidos sem ID de cliente na origem", d.ordersWithoutCustomer.withoutCustomerIdInSource],
             ["Exemplos de IDs de cliente ausentes", gap.sampleCustomerIds.join(", ") || "—"],
+            ...(d.ordersTotalZeroWithItems
+              ? ([
+                  ["Total R$ 0,00 com itens que somam valor", `${d.ordersTotalZeroWithItems.total} · ${Object.entries(d.ordersTotalZeroWithItems.byKind).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}`],
+                  ["Exemplos (ID: soma dos itens)", d.ordersTotalZeroWithItems.sample.map((s) => `${s.id}: R$ ${s.itemsTotal}`).join(" · ") || "—"],
+                ] as [string, ReactNode][])
+              : []),
           ]}
         />
         {d.unresolvedReferences.length > 0 && (

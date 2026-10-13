@@ -964,6 +964,13 @@ export const ordersDiagnosticsSchema = obj({
     withoutCustomerIdInSource: z.number(),
   }),
   unresolvedReferences: z.array(pendingReferenceSchema),
+  ordersTotalZeroWithItems: obj({
+    total: z.number(),
+    byKind: z.record(z.string(), z.number()),
+    orderDate: rangeSchema,
+    sample: z.array(obj({ id: z.string(), kind: nstr, itemsTotal: money, sourceUpdatedAt: nstr })),
+    note: nstr,
+  }).optional(),
 });
 export type OrdersDiagnostics = z.infer<typeof ordersDiagnosticsSchema>;
 
