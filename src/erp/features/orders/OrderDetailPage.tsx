@@ -15,7 +15,16 @@ import { StatePanel } from "../../components/StatePanel";
 import { Badge, CapabilityNotice, CommandError, Dl, PageHeader } from "../../components/ui";
 import { formatDay, formatInstant, formatMoney, formatQuantity, parseMoneyInput, parseQuantityInput } from "../../format";
 import { StatusChips } from "./OrdersPage";
-import { invoiceSpec, PixCell, paymentSpec, StatePill, shippingSpec } from "./orderUi";
+import {
+  ActionLink,
+  invoiceSpec,
+  OrderAmount,
+  PixCell,
+  paymentSpec,
+  ReferenceValue,
+  StatePill,
+  shippingSpec,
+} from "./orderUi";
 
 type EditLine = { key: number; product: Product | null; quantity: string; unitPrice: string };
 
@@ -277,18 +286,30 @@ function OrderOperations({ order }: { order: OrderDetail }) {
           <div>
             <span className="erp-muted">Frete</span>
             <StatePill spec={shippingSpec(op?.shipping)} title={op?.shipping.reason} />
-            {can("shipping:read") && <Link to={`/erp/frete/pedidos/${enc}/cotacao`}>Cotação de frete</Link>}
+            {can("shipping:read") && (
+              <ActionLink rule={op?.actions?.shipping} to={`/erp/frete/pedidos/${enc}/cotacao`}>
+                Cotação de frete
+              </ActionLink>
+            )}
           </div>
           <div>
             <span className="erp-muted">Nota fiscal</span>
             <StatePill spec={invoiceSpec(op?.invoice)} title={op?.invoice.reason} />
-            {can("invoices:read") && <Link to={`/erp/notas-fiscais/pedidos/${enc}/montagem`}>Montagem da nota fiscal</Link>}
+            {can("invoices:read") && (
+              <ActionLink rule={op?.actions?.invoice} to={`/erp/notas-fiscais/pedidos/${enc}/montagem`}>
+                Montagem da nota fiscal
+              </ActionLink>
+            )}
           </div>
           <div>
             <span className="erp-muted">Pagamento</span>
             <StatePill spec={paymentSpec(op?.payment)} title="Estado espelhado do Mercos" />
             <PixCell pix={op?.pix} />
-            {can("finance:read") && <Link to={`/erp/financeiro/pedidos/${enc}`}>Ver no financeiro</Link>}
+            {can("finance:read") && (
+              <ActionLink to={`/erp/financeiro/pedidos/${enc}`}>
+                Ver no financeiro
+              </ActionLink>
+            )}
           </div>
         </div>
         <p className="erp-muted">
@@ -347,7 +368,7 @@ export function OrderDetailPage() {
     <>
       <PageHeader
         title={`${o.kind === "quote" ? "Orçamento" : "Pedido"} ${o.number ?? o.id}`}
-        subtitle={`Cliente ${o.customerName ?? o.customerId ?? "—"} · versão local ${o.version} · origem atualizada em ${formatInstant(o.sourceUpdatedAt)}`}
+        subtitle={`Cliente ${o.references?.customer?.name ?? o.customerName ?? "cadastro não disponível"} · versão local ${o.version} · alterado no Mercos em ${formatInstant(o.sourceUpdatedAt)} · sincronizado em ${formatInstant(o.capturedAt)}`}
         actions={
           <>
             {o.customerId && (
@@ -390,18 +411,20 @@ export function OrderDetailPage() {
         <h3>Resumo</h3>
         <Dl
           items={[
-            ["Emissão", o.issueDate ? formatDay(o.issueDate) : formatInstant(o.issuedAt)],
+            ["Data do pedido", o.issueDate ? formatDay(o.issueDate) : formatInstant(o.issuedAt)],
+            ["Alterado no Mercos (cursor)", formatInstant(o.sourceUpdatedAt)],
+            ["Última sincronização no ERP", formatInstant(o.capturedAt)],
             ["Previsão de entrega", formatDay(o.expectedDeliveryDate)],
-            ["Total bruto", formatMoney(o.grossTotal)],
-            ["Desconto", formatMoney(o.discountTotal)],
-            ["Frete", formatMoney(o.freightTotal)],
-            ["Total líquido", formatMoney(o.netTotal)],
-            ["Vendedor", o.sellerId],
-            ["Tipo de pedido", o.orderTypeId],
-            ["Condição de pagamento", o.paymentConditionId],
-            ["Tabela de preço", o.priceTableId],
-            ["Transportadora", o.carrierId],
-            ["Política comercial", o.commercialPolicyId],
+            ["Total bruto", <OrderAmount key="g" value={o.grossTotal} unknown={o.totalsUnknown} />],
+            ["Desconto", <OrderAmount key="d" value={o.discountTotal} unknown={o.totalsUnknown} />],
+            ["Frete", <OrderAmount key="f" value={o.freightTotal} unknown={o.totalsUnknown} />],
+            ["Total líquido", <OrderAmount key="n" value={o.netTotal} unknown={o.totalsUnknown} />],
+            ["Vendedor", <ReferenceValue key="s" reference={o.references?.seller} fallbackId={o.sellerId} />],
+            ["Tipo de pedido", <ReferenceValue key="t" reference={o.references?.orderType} fallbackId={o.orderTypeId} />],
+            ["Condição de pagamento", <ReferenceValue key="p" reference={o.references?.paymentCondition} fallbackId={o.paymentConditionId} />],
+            ["Tabela de preço", <ReferenceValue key="tp" reference={o.references?.priceTable} fallbackId={o.priceTableId} />],
+            ["Transportadora", <ReferenceValue key="c" reference={o.references?.carrier} fallbackId={o.carrierId} />],
+            ["Política comercial", <ReferenceValue key="pc" reference={o.references?.commercialPolicy} fallbackId={o.commercialPolicyId} />],
           ]}
         />
       </section>

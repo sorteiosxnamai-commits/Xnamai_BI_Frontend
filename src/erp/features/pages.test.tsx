@@ -70,7 +70,8 @@ test("visão geral: dado indisponível não vira zero e o resumo de pedidos most
   renderErp(<OverviewPage />);
   expect(await screen.findByRole("heading", { name: "Visão Geral" })).toBeInTheDocument();
   expect(await screen.findByText("Parcial")).toBeInTheDocument(); // cobertura da importação
-  expect(screen.getByText(/Valor vendido; não é valor recebido/)).toBeInTheDocument();
+  expect(screen.getByText(/Valor vendido — só pedidos \(exclui cancelados e orçamentos\)/)).toBeInTheDocument();
+  expect(screen.getByText(/Não é valor recebido/)).toBeInTheDocument();
   expect(screen.getByText(/Variação indisponível: Sem período definido/)).toBeInTheDocument();
   expect(await screen.findByText("indisponível")).toBeInTheDocument();
   expect(screen.getByText(/data de corte indisponível/)).toBeInTheDocument();

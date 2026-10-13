@@ -100,7 +100,8 @@ test("tabela mostra frete, nota, pagamento, Pix e pendências sem inventar estad
   expect(first.getByText("Pago")).toBeInTheDocument();
   expect(first.getAllByText("Indisponível").length).toBe(2); // frete e nota sem fonte
   expect(first.getAllByText("—", { selector: ".erp-muted" })).toHaveLength(2); // Pix desconhecido e sem pendências
-  expect(first.getByText("sincronizado do Mercos")).toBeInTheDocument(); // nenhuma ação humana
+  expect(first.getByText(/Sincronizado:/)).toBeInTheDocument();
+  expect(first.queryByText(/Ação no ERP/)).not.toBeInTheDocument(); // nenhuma ação humana
   const second = within(rows[2]);
   expect(second.getByText("Incompleto")).toBeInTheDocument();
   expect(second.getByText("Não cotado")).toBeInTheDocument();
@@ -114,7 +115,7 @@ test("ação humana é distinguida da atualização vinda do Mercos", async () =
   setup([
     order("100", {}, { lastHumanAction: { at: "2026-10-07T15:00:00+00:00", operator: "ana@x.com", action: "update_order" } }),
   ]);
-  expect(await screen.findByText("por ana@x.com")).toBeInTheDocument();
+  expect(await screen.findByText(/Ação no ERP: .* por ana@x.com/)).toBeInTheDocument();
 });
 
 test("indicadores vêm do resumo do filtro; variação e fontes ausentes aparecem como indisponíveis", async () => {

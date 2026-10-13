@@ -18,9 +18,19 @@ import { Pill } from "../../components/Pill";
 import { type Column, ServerList } from "../../components/ServerList";
 import { StatePanel } from "../../components/StatePanel";
 import { CapabilityNotice } from "../../components/ui";
-import { formatInstant } from "../../format";
 import { useScope } from "../../scope";
-import { invoiceSpec, PixCell, paymentSpec, StatePill, shippingSpec } from "./orderUi";
+import {
+  ActionLink,
+  DatesCell,
+  DatesNote,
+  invoiceSpec,
+  kindComposition,
+  OrderAmount,
+  PixCell,
+  paymentSpec,
+  StatePill,
+  shippingSpec,
+} from "./orderUi";
 
 const schema = pageOf(orderSchema) as unknown as ZodType<Page<Order>>;
 
@@ -92,14 +102,14 @@ function RowMenu({ order }: { order: Order }) {
             Abrir pedido
           </Link>
           {can("shipping:read") && (
-            <Link role="menuitem" to={`/erp/frete/pedidos/${enc}/cotacao`}>
+            <ActionLink menu rule={order.operational?.actions?.shipping} to={`/erp/frete/pedidos/${enc}/cotacao`}>
               Cotação de frete
-            </Link>
+            </ActionLink>
           )}
           {can("invoices:read") && (
-            <Link role="menuitem" to={`/erp/notas-fiscais/pedidos/${enc}/montagem`}>
+            <ActionLink menu rule={order.operational?.actions?.invoice} to={`/erp/notas-fiscais/pedidos/${enc}/montagem`}>
               Montagem da nota fiscal
-            </Link>
+            </ActionLink>
           )}
           {can("finance:read") && (
             <Link role="menuitem" to={`/erp/financeiro/pedidos/${enc}`}>
@@ -129,6 +139,12 @@ const COLUMNS: Column<Order>[] = [
   },
   { key: "customer", header: "Cliente", render: (o) => o.operational?.customerName ?? o.customerName ?? o.customerId ?? "—" },
   {
+    key: "total",
+    header: "Valor",
+    sortKey: "netTotal",
+    render: (o) => <OrderAmount value={o.netTotal} unknown={o.totalsUnknown} />,
+  },
+  {
     key: "items",
     header: "Itens",
     render: (o) =>
@@ -148,17 +164,9 @@ const COLUMNS: Column<Order>[] = [
   { key: "pix", header: "Pix", render: (o) => <PixCell pix={o.operational?.pix} /> },
   {
     key: "updated",
-    header: "Última atualização",
+    header: "Datas",
     sortKey: "issuedAt",
-    render: (o) => {
-      const action = o.operational?.lastHumanAction;
-      return (
-        <div className="erp-updated">
-          <span>{formatInstant(action?.at ?? o.operational?.lastExternalUpdateAt ?? o.issuedAt)}</span>
-          <small className="erp-muted">{action ? `por ${action.operator}` : "sincronizado do Mercos"}</small>
-        </div>
-      );
-    },
+    render: (o) => <DatesCell order={o} />,
   },
   {
     key: "pendencies",
@@ -305,9 +313,9 @@ export function OrdersPage() {
       )}
       <section className="erp-kpis" aria-label="Indicadores do filtro atual">
         <Metric
-          title="Pedidos no filtro"
+          title={`Pedidos no filtro${s && !s.coverage.complete ? " (parcial)" : ""}`}
           value={s ? String(s.orders.count) : summary.isLoading ? "…" : "Indisponível"}
-          note={s ? variationNote(s) : undefined}
+          note={s ? `Inclui ${kindComposition(s)}. ${variationNote(s)}` : undefined}
           tone="ok"
           unavailable={!s && !summary.isLoading}
         />
@@ -321,6 +329,7 @@ export function OrdersPage() {
           unavailable={!s && !summary.isLoading}
         />
       </section>
+      {s && <DatesNote summary={s} />}
       <section className="erp-filterbar" aria-label="Filtros de pedidos">
         <label className="erp-search-field">
           <Icon name="search" />

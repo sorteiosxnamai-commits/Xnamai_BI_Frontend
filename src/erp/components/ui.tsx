@@ -71,6 +71,27 @@ const LABELS: Record<string, string> = {
   settled: "Baixado",
 };
 
+const PHASE_LABELS: Record<string, string> = {
+  done: "Carga concluída",
+  running: "Em andamento",
+  denied: "Acesso negado (403)",
+  error: "Com erro",
+  not_started: "Não iniciada",
+};
+const PHASE_TONES: Record<string, string> = {
+  done: "ok",
+  running: "info",
+  denied: "warn",
+  error: "bad",
+  not_started: "neutral",
+};
+
+/** Fase da carga: tentativa e 403 não contam como concluída. */
+export function PhaseBadge({ phase }: { phase?: string | null }) {
+  const key = phase ?? "not_started";
+  return <span className={`erp-badge erp-badge-${PHASE_TONES[key] ?? "neutral"}`}>{PHASE_LABELS[key] ?? key}</span>;
+}
+
 export function Badge({ value, label }: { value: string; label?: string }) {
   return (
     <span className={`erp-badge erp-badge-${TONES[value] ?? "neutral"}`}>

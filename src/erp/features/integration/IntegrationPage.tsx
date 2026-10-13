@@ -2,26 +2,13 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { type ZodType, z } from "zod";
 import { useCommand, useErpQuery, useInvalidateErp } from "../../api/hooks";
-import {
-  type Conflict,
-  conflictSchema,
-  fieldSchema,
-  integrationStatusSchema,
-  jobSchema,
-  type Operation,
-  operationDetailSchema,
-  operationSchema,
-  type Page,
-  pageOf,
-  quarantineSchema,
-  runSchema,
-} from "../../api/schemas";
+import { type Conflict, conflictSchema, fieldSchema, integrationStatusSchema, jobSchema, type Operation, operationDetailSchema, operationSchema, ordersDiagnosticsSchema, type Page, pageOf, quarantineSchema, reconciliationSchema, runSchema } from "../../api/schemas";
 import { useErp } from "../../auth/context";
 import { OperationTracker } from "../../components/OperationTracker";
 import { type Column, ServerList } from "../../components/ServerList";
 import { StatePanel } from "../../components/StatePanel";
-import { Badge, CommandError, Dl, PageHeader, Tabs } from "../../components/ui";
-import { formatInstant } from "../../format";
+import { Badge, CommandError, Dl, PageHeader, PhaseBadge, Tabs } from "../../components/ui";
+import { formatDay, formatInstant } from "../../format";
 
 type Run = z.infer<typeof runSchema>;
 type Quarantine = z.infer<typeof quarantineSchema>;
@@ -39,6 +26,7 @@ const TABS = [
   { id: "conflitos", label: "Conflitos" },
   { id: "quarentena", label: "Quarentena" },
   { id: "campos", label: "Inventário de campos" },
+  { id: "diagnostico", label: "Diagnóstico de pedidos" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -111,6 +99,7 @@ function ResourcesTab() {
               Sincronizar tudo
             </button>
             <label className="erp-field"><span><input type="checkbox" checked={full} onChange={(e) => setFull(e.target.checked)} /> Carga completa (consome mais cota do Mercos)</span></label>
+            <small className="erp-muted">Uma carga completa interrompida continua do último ponto confirmado dela; recurso com acesso negado nas últimas 24 h não é repetido por “Sincronizar tudo”.</small>
           </div>
         )}
         <p className="erp-muted">“Sincronizar” só agenda um job no backend; o navegador nunca percorre páginas do Mercos.</p>
@@ -120,16 +109,32 @@ function ResourcesTab() {
       <section className="erp-card" aria-label="Recursos">
         <div className="erp-table-wrap">
           <table className="erp-table">
-            <thead><tr><th>Recurso</th><th>Origem</th><th>Situação</th><th className="num">Local</th><th>Dados até</th><th>Última tentativa</th><th className="num">Pendentes</th><th className="num">Campos novos</th><th /></tr></thead>
+            <thead><tr><th>Recurso</th><th>Origem</th><th>Situação</th><th title="Implementado no ERP · habilitado · permitido pela conta">Capacidade</th><th className="num">Local</th><th title="Cursor de alteração do Mercos">Alterações até</th><th>Último sucesso</th><th>Última tentativa</th><th>Última atualização incremental</th><th className="num">Pendentes</th><th className="num">Campos novos</th><th /></tr></thead>
             <tbody>
               {data.resources.map((r) => (
                 <tr key={r.resource}>
                   <td><strong>{r.label}</strong><div className="erp-muted">{r.resource}</div>{r.error && <div className="erp-field-error">{r.error}</div>}</td>
                   <td>{r.upstream}</td>
-                  <td><Badge value={r.status} />{r.retryAfter && <div className="erp-muted">retry após {formatInstant(r.retryAfter)}</div>}</td>
-                  <td className="num">{r.localRecords === null ? "indisponível" : r.localRecords}</td>
-                  <td>{formatInstant(r.dataThrough)}</td>
+                  <td><PhaseBadge phase={r.phase} /><div className="erp-muted">{r.status}</div>{r.retryAfter && <div className="erp-muted">retry após {formatInstant(r.retryAfter)}</div>}</td>
+                  <td>
+                    <div className="erp-muted">ERP: {r.capability?.implementedInErp ? "implementado" : "não implementado"}</div>
+                    <div className="erp-muted">{r.capability?.enabled ? "habilitado" : "desabilitado"}</div>
+                    <div className="erp-muted">conta: {r.capability?.accountAccess === "allowed" ? "permitido" : r.capability?.accountAccess === "denied" ? "negado (403)" : "não confirmado"}</div>
+                  </td>
+                  <td className="num">{r.localRecords === null ? "indisponível" : r.localRecords}{r.localRecordsPartial && <small className="erp-muted"> (parcial)</small>}</td>
+                  <td title={r.cursor ?? undefined}>{formatInstant(r.dataThrough)}</td>
+                  <td>{formatInstant(r.lastSuccessAt)}</td>
                   <td>{formatInstant(r.lastAttemptAt)}</td>
+                  <td>
+                    {r.lastIncremental ? (
+                      <>
+                        {formatInstant(r.lastIncremental.finishedAt)}
+                        <div className="erp-muted">{r.lastIncremental.persisted} gravados de {r.lastIncremental.received}</div>
+                      </>
+                    ) : (
+                      <span className="erp-muted">nenhuma ainda</span>
+                    )}
+                  </td>
                   <td className="num">{r.unresolved ?? "—"}</td>
                   <td className="num">{r.unmappedFields}</td>
                   <td>{can("integration:sync") && <button type="button" className="erp-btn" disabled={sync.isPending} onClick={() => void run(r.resource)}>Sincronizar</button>}</td>
@@ -141,9 +146,182 @@ function ResourcesTab() {
       </section>
       {data.pendingReferences.length > 0 && (
         <section className="erp-card"><h3>Referências pendentes</h3>
-          <ul>{data.pendingReferences.map((p) => <li key={`${p.resource}.${p.field}`}>{p.pending} em {p.resource}.{p.field} aguardando {p.target}</li>)}</ul></section>
+          <ul>{data.pendingReferences.map((p) => <li key={`${p.resource}.${p.field}`}>{p.pending} em {p.resource}.{p.field} sem cadastro em {p.target}{p.distinctIds !== undefined && ` (${p.distinctIds} ID(s) distinto(s))`}{p.reason && <small className="erp-muted"> — {p.reason}</small>}</li>)}</ul></section>
       )}
     </>
+  );
+}
+
+function Range({ range }: { range: { min?: string | null; max?: string | null } }) {
+  return <>{range.min && range.max ? `${formatDay(range.min)} a ${formatDay(range.max)}` : "—"}</>;
+}
+
+/** Somente leitura: o que está gravado sobre a carga de Pedidos (execuções, jobs e lacunas do espelho). */
+function OrdersDiagnosticsTab() {
+  const query = useErpQuery(["orders-diagnostics"], "/integration/diagnostics/orders", ordersDiagnosticsSchema, {
+    refetchInterval: 30_000,
+  });
+  if (query.isLoading) return <StatePanel kind="loading" />;
+  if (query.error) return <StatePanel kind="error" message={(query.error as Error).message} onRetry={() => void query.refetch()} />;
+  const d = query.data;
+  if (!d) return null;
+  const gap = d.ordersWithoutCustomer.customerIdMissingInMirror;
+  return (
+    <>
+      <section className="erp-card" aria-label="Carga de pedidos">
+        <h3>Carga de pedidos</h3>
+        <Dl
+          items={[
+            ["Situação do checkpoint", `${d.checkpoint.status} · cursor ${d.checkpoint.cursor ?? "—"}`],
+            ["Alterações até (cursor)", formatInstant(d.checkpoint.dataThrough)],
+            ["Última tentativa / último sucesso", `${formatInstant(d.checkpoint.lastAttemptAt)} / ${formatInstant(d.checkpoint.lastSuccessAt)}`],
+            ["Pedidos gravados", d.mirror.orders],
+            ["Datas dos pedidos gravados", <Range key="r" range={d.mirror.orderDate} />],
+            ["Última alteração no Mercos / última gravação", `${formatInstant(d.mirror.sourceUpdatedAtMax)} / ${formatInstant(d.mirror.capturedAtMax)}`],
+            ["Reinícios registrados", `${d.runs.restartsRecorded}${d.runs.restartTimes.length ? ` (último: ${formatInstant(d.runs.restartTimes[d.runs.restartTimes.length - 1])})` : ""}`],
+            ["Registros relidos sem mudança", d.runs.rereadRatio === null ? "—" : `${d.runs.unchanged} de ${d.runs.received} (${Math.round(d.runs.rereadRatio * 100)}%)`],
+            ["Sobreposição intencional entre execuções", `${d.runs.intentionalOverlapSeconds} s`],
+          ]}
+        />
+        {d.findings.length === 0 ? (
+          <p className="erp-muted">Nenhum achado automático nas execuções recentes.</p>
+        ) : (
+          <ul>{d.findings.map((f) => <li key={f.code}><strong>{f.code}</strong>: {f.message}</li>)}</ul>
+        )}
+      </section>
+      <section className="erp-card" aria-label="Fila">
+        <h3>Fila de jobs</h3>
+        <p>
+          {d.jobs.processing.length} em processamento · {d.jobs.queued.length} na fila
+          {d.jobs.oldestQueuedAgeMinutes !== null && ` (o mais antigo espera há ${d.jobs.oldestQueuedAgeMinutes} min)`}
+        </p>
+        {d.jobs.blockedBehindProcessing && (
+          <p className="erp-notice">Há jobs na fila esperando um job em processamento: a fila é drenada um job por vez.</p>
+        )}
+      </section>
+      <section className="erp-card" aria-label="Lacunas">
+        <h3>Pedidos sem itens, sem cliente e referências históricas (casos separados)</h3>
+        <Dl
+          items={[
+            ["Sem itens (por tipo)", `${d.ordersWithoutItems.total} · ${Object.entries(d.ordersWithoutItems.byKind).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}`],
+            ["Datas dos pedidos sem itens", <Range key="i" range={d.ordersWithoutItems.orderDate} />],
+            ["Hidratação de itens", `${d.hydration.pendingOrders} pendentes${d.hydration.note ? ` — ${d.hydration.note}` : ""}`],
+            ["Cliente do pedido não existe no espelho", `${gap.orders} pedidos · ${gap.distinctCustomerIds} cliente(s) distinto(s)`],
+            ["Datas desses pedidos", <Range key="g" range={gap.orderDate} />],
+            ["Motivo (com evidência)", gap.reason ?? "—"],
+            ["Pedidos sem ID de cliente na origem", d.ordersWithoutCustomer.withoutCustomerIdInSource],
+            ["Exemplos de IDs de cliente ausentes", gap.sampleCustomerIds.join(", ") || "—"],
+          ]}
+        />
+        {d.unresolvedReferences.length > 0 && (
+          <ul>
+            {d.unresolvedReferences.map((p) => (
+              <li key={p.field}>{p.pending} pedidos em {p.field} ({p.distinctIds ?? "?"} ID(s) distinto(s)) — {p.reason}</li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="erp-card" aria-label="Execuções recentes">
+        <h3>Execuções recentes de pedidos</h3>
+        <div className="erp-table-wrap">
+          <table className="erp-table">
+            <thead><tr><th>Execução</th><th>Modo</th><th>Situação</th><th>Início</th><th className="num">Páginas</th><th className="num">Recebidos</th><th className="num">Gravados</th><th className="num">Sem mudança</th><th>Começou em</th><th>Confirmou até</th></tr></thead>
+            <tbody>
+              {d.runs.recent.map((r) => (
+                <tr key={r.runId}>
+                  <td>#{r.runId}</td><td>{r.mode}</td><td><Badge value={r.status} /></td><td>{formatInstant(r.startedAt)}</td>
+                  <td className="num">{r.pages}</td><td className="num">{r.received}</td><td className="num">{r.persisted}</td><td className="num">{r.unchanged}</td>
+                  <td>{r.cursorBefore ?? "início"}</td><td>{r.cursorAfter ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
+const RECON_RESOURCES = [
+  { value: "orders", label: "Pedidos" },
+  { value: "customers", label: "Clientes" },
+  { value: "products", label: "Produtos" },
+];
+
+/** Compara o espelho do ERP com o BI (somente leitura): o BI nunca sobrescreve o ERP. */
+function ReconciliationPanel() {
+  const [resource, setResource] = useState("orders");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [run, setRun] = useState<string | null>(null);
+  const params = new URLSearchParams();
+  if (from) params.set("dateFrom", from);
+  if (to && resource === "orders") params.set("dateTo", to);
+  if (from && resource !== "orders") params.delete("dateFrom");
+  const path = `/integration/reconciliation/${resource}${params.toString() ? `?${params}` : ""}`;
+  const query = useErpQuery(["reconciliation", run], path, reconciliationSchema, { enabled: run !== null, staleTime: 60_000 });
+  const data = query.data;
+  return (
+    <section className="erp-card" aria-label="Conciliação com o BI">
+      <h3>Conciliação com o BI (somente leitura)</h3>
+      <p className="erp-muted">
+        Compara pelo ID Mercos, no mesmo período e no mesmo instante de atualização. Diferença de filtro ou de cobertura da
+        carga é “explicada”; o resto precisa de investigação. Nada é alterado em nenhum dos lados.
+      </p>
+      <div className="erp-toolbar">
+        <label className="erp-field"><span>Recurso</span>
+          <select value={resource} onChange={(e) => { setResource(e.target.value); setRun(null); }}>
+            {RECON_RESOURCES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+        </label>
+        {resource === "orders" && (
+          <>
+            <label className="erp-field"><span>Pedidos de</span><input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setRun(null); }} /></label>
+            <label className="erp-field"><span>até</span><input type="date" value={to} onChange={(e) => { setTo(e.target.value); setRun(null); }} /></label>
+          </>
+        )}
+        <button type="button" className="erp-btn erp-btn-primary" disabled={query.isFetching} onClick={() => setRun(`${resource}|${from}|${to}|${Date.now()}`)}>
+          {query.isFetching ? "Conciliando…" : "Conciliar"}
+        </button>
+      </div>
+      {query.error && <StatePanel kind="error" message={(query.error as Error).message} onRetry={() => void query.refetch()} />}
+      {data && (
+        <>
+          <Dl
+            items={[
+              ["Instante comum (asOf)", `${formatInstant(data.asOf)} — ${data.asOfBasis}`],
+              ["ERP", `${data.erp.count} registros · carga ${data.erp.checkpoint.status} · cursor ${data.erp.checkpoint.cursor ?? "—"}`],
+              ["BI", `${data.bi.count} registros · sincronização ${data.bi.syncState.status} · cursor ${data.bi.syncState.cursor ?? "—"}`],
+              ["Casados pelo ID Mercos", data.matched],
+              ["Divergências", `${data.totals.divergences} (${data.totals.explained} explicadas · ${data.totals.unexplained} inexplicadas)`],
+            ]}
+          />
+          {data.divergences.length === 0 ? (
+            <p className="erp-muted">Nenhuma divergência no escopo comparado.</p>
+          ) : (
+            <div className="erp-table-wrap">
+              <table className="erp-table">
+                <thead><tr><th>Divergência</th><th className="num">Total</th><th className="num">Explicadas</th><th className="num">Inexplicadas</th><th>Impacto</th><th>Correção</th><th>Exemplos (ID)</th></tr></thead>
+                <tbody>
+                  {data.divergences.map((d) => (
+                    <tr key={d.code}>
+                      <td><strong>{d.title}</strong></td>
+                      <td className="num">{d.count}</td>
+                      <td className="num">{d.explained}</td>
+                      <td className="num">{d.unexplained}</td>
+                      <td>{d.impact}</td>
+                      <td>{d.fix}</td>
+                      <td>{d.samples.map((s) => String(s.id)).join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <ul>{data.notes.map((n) => <li key={n} className="erp-muted">{n}</li>)}</ul>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -298,6 +476,12 @@ export function IntegrationPage() {
       />
       <Tabs tabs={[...TABS]} value={tab} onChange={setTab} />
       {tab === "recursos" && <ResourcesTab />}
+      {tab === "diagnostico" && (
+        <>
+          <OrdersDiagnosticsTab />
+          <ReconciliationPanel />
+        </>
+      )}
       {tab === "execucoes" && (
         <ServerList<Run> resource="runs" path="/integration/runs" schema={runPage} caption="Execuções de sincronização" columns={runColumns}
           filters={[{ name: "resource", label: "Recurso", type: "text" }, { name: "status", label: "Situação", type: "select", options: ["success", "failed", "waiting_rate_limit", "forbidden", "interrupted", "partial", "cancelled"].map((v) => ({ value: v, label: v })) }]}

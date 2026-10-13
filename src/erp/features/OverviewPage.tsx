@@ -3,9 +3,10 @@ import { buildQuery } from "../api/client";
 import { useErpQuery } from "../api/hooks";
 import { operationalSummarySchema, overviewSchema } from "../api/schemas";
 import { StatePanel } from "../components/StatePanel";
-import { Badge, PageHeader } from "../components/ui";
+import { PageHeader, PhaseBadge } from "../components/ui";
 import { formatInstant, formatMoney } from "../format";
 import { periodLabel, useScope } from "../scope";
+import { DatesNote, kindComposition } from "./orders/orderUi";
 
 const OPERATION_LABELS: [string, string][] = [
   ["queued", "Na fila"],
@@ -46,18 +47,31 @@ function OrdersSummary() {
     <section aria-label="Resumo de pedidos">
       <div className="erp-kpis">
         <div className="erp-kpi erp-kpi-ok">
-          <span className="erp-kpi-title">Pedidos · {periodLabel(from, to)}</span>
+          <span className="erp-kpi-title">
+            Pedidos no filtro{s.coverage.complete ? "" : " (parcial)"} · {periodLabel(from, to)}
+          </span>
           <strong>{s.orders.count}</strong>
           <small>
+            Inclui {kindComposition(s)}.{" "}
             {s.variation.available
               ? `${s.variation.percent?.replace(".", ",")}% vs. período anterior`
               : `Variação indisponível: ${s.variation.reason ?? "sem base de comparação"}`}
           </small>
         </div>
         <div className="erp-kpi erp-kpi-info">
-          <span className="erp-kpi-title">Valor vendido (líquido)</span>
-          <strong>{formatMoney(s.values.net)}</strong>
-          <small>{s.values.note}</small>
+          <span className="erp-kpi-title">
+            Valor vendido — só pedidos (exclui cancelados e orçamentos){s.coverage.complete ? "" : " · parcial"}
+          </span>
+          <strong>{formatMoney(s.values.sold?.net ?? s.values.net)}</strong>
+          <small>
+            {s.values.sold ? `${s.values.sold.count} pedidos. ` : ""}
+            {s.values.byKind?.cancelled ? `${s.values.byKind.cancelled.count} cancelados e ` : ""}
+            {s.values.byKind?.quote ? `${s.values.byKind.quote.count} orçamentos ficam de fora. ` : ""}
+            {s.values.sold?.unknownTotals
+              ? `${s.values.sold.unknownTotals} pedido(s) incompleto(s) sem valor conhecido não entram na soma. `
+              : ""}
+            Não é valor recebido.
+          </small>
         </div>
         <div className="erp-kpi erp-kpi-purple">
           <span className="erp-kpi-title">Atualizações pendentes</span>
@@ -74,6 +88,7 @@ function OrdersSummary() {
           <small>{s.coverage.note ?? "Pedidos e clientes sincronizados."}</small>
         </div>
       </div>
+      <DatesNote summary={s} />
     </section>
   );
 }
@@ -89,7 +104,8 @@ export function OverviewPage() {
   const data = query.data;
   if (!data) return null;
   const attention = (data.operations.unknown ?? 0) + (data.operations.failed ?? 0) + data.openConflicts;
-  const neverSynced = data.resources.filter((r) => r.status === "never").length;
+  const phaseCount = (phase: string) =>
+    data.phases?.[phase] ?? data.resources.filter((r) => (r.phase ?? "not_started") === phase).length;
 
   return (
     <>
@@ -107,13 +123,19 @@ export function OverviewPage() {
         </p>
       </div>
       <div className="erp-grid">
-        <div className="erp-metric">
-          <span>Recursos sincronizados</span>
+        <section className="erp-metric" aria-label="Carga por recurso">
+          <span>Carga por recurso</span>
           <strong>
-            {data.resources.length - neverSynced} / {data.resources.length}
+            {phaseCount("done")} de {data.resources.length} concluídas
           </strong>
-          <small>{neverSynced ? `${neverSynced} nunca sincronizado(s)` : "todos já sincronizaram ao menos uma vez"}</small>
-        </div>
+          <div className="erp-phase-row">
+            <span>{phaseCount("running")} em andamento</span>
+            <span>{phaseCount("denied")} acesso negado (403)</span>
+            <span>{phaseCount("error")} com erro</span>
+            <span>{phaseCount("not_started")} não iniciadas</span>
+          </div>
+          <small>Tentativa e acesso negado não contam como carga concluída.</small>
+        </section>
         <div className="erp-metric">
           <span>Pendências que pedem atenção</span>
           <strong>{attention}</strong>
@@ -146,8 +168,9 @@ export function OverviewPage() {
                 <th scope="col">Recurso</th>
                 <th scope="col">Situação</th>
                 <th scope="col" className="num">Registros locais</th>
-                <th scope="col">Dados até</th>
+                <th scope="col" title="Cursor de alteração: até quando o Mercos informou mudanças">Alterações até</th>
                 <th scope="col">Último sucesso</th>
+                <th scope="col">Última tentativa</th>
                 <th scope="col" className="num">Pendentes</th>
               </tr>
             </thead>
@@ -159,11 +182,21 @@ export function OverviewPage() {
                     {resource.error && <div className="erp-muted">{resource.error}</div>}
                   </td>
                   <td>
-                    <Badge value={resource.status} />
+                    <PhaseBadge phase={resource.phase} />
                   </td>
-                  <td className="num">{resource.records === null ? "indisponível" : resource.records}</td>
+                  <td className="num">
+                    {resource.records === null ? (
+                      "indisponível"
+                    ) : (
+                      <>
+                        {resource.records}
+                        {resource.recordsPartial && <small className="erp-muted"> (parcial)</small>}
+                      </>
+                    )}
+                  </td>
                   <td>{formatInstant(resource.dataThrough)}</td>
                   <td>{formatInstant(resource.lastSuccessAt)}</td>
+                  <td>{formatInstant(resource.lastAttemptAt)}</td>
                   <td className="num">{resource.unresolved ?? "—"}</td>
                 </tr>
               ))}
@@ -188,7 +221,9 @@ export function OverviewPage() {
           <ul>
             {data.pendingReferences.map((item) => (
               <li key={`${item.resource}.${item.field}`}>
-                {item.pending} em <code>{item.resource}.{item.field}</code> aguardando <code>{item.target}</code>
+                {item.pending} em <code>{item.resource}.{item.field}</code> sem cadastro em <code>{item.target}</code>
+                {item.distinctIds !== undefined && ` (${item.distinctIds} ID(s) distinto(s))`}
+                {item.reason && <small className="erp-muted"> — {item.reason}</small>}
               </li>
             ))}
           </ul>

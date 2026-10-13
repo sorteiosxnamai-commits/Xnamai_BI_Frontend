@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { ZodType } from "zod";
 import { buildQuery } from "../../api/client";
 import { useErpQuery } from "../../api/hooks";
@@ -7,7 +7,7 @@ import { Icon } from "../../components/icons";
 import { type Column, ServerList } from "../../components/ServerList";
 import { formatMoney } from "../../format";
 import { useScope } from "../../scope";
-import { StatePill, shippingSpec } from "../orders/orderUi";
+import { ActionLink, StatePill, shippingSpec } from "../orders/orderUi";
 
 const schema = pageOf(orderSchema) as unknown as ZodType<Page<Order>>;
 
@@ -30,9 +30,13 @@ const COLUMNS: Column<Order>[] = [
     key: "actions",
     header: "Ações",
     render: (o) => (
-      <Link to={`/erp/frete/pedidos/${encodeURIComponent(o.id)}/cotacao`} onClick={(event) => event.stopPropagation()}>
+      <ActionLink
+        rule={o.operational?.actions?.shipping}
+        to={`/erp/frete/pedidos/${encodeURIComponent(o.id)}/cotacao`}
+        onClick={(event) => event.stopPropagation()}
+      >
         Abrir cotação
-      </Link>
+      </ActionLink>
     ),
   },
 ];

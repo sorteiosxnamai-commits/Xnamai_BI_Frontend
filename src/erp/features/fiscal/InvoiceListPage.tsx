@@ -1,12 +1,11 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { ZodType } from "zod";
 import { buildQuery } from "../../api/client";
 import { useErpQuery } from "../../api/hooks";
 import { type OperationalSummary, type Order, operationalSummarySchema, orderSchema, type Page, pageOf } from "../../api/schemas";
 import { type Column, ServerList } from "../../components/ServerList";
-import { formatMoney } from "../../format";
 import { useScope } from "../../scope";
-import { invoiceSpec, StatePill } from "../orders/orderUi";
+import { ActionLink, invoiceSpec, OrderAmount, StatePill } from "../orders/orderUi";
 
 const schema = pageOf(orderSchema) as unknown as ZodType<Page<Order>>;
 
@@ -20,15 +19,19 @@ const STATES = [
 const COLUMNS: Column<Order>[] = [
   { key: "number", header: "Pedido", sortKey: "number", render: (o) => <strong>#{o.number ?? o.id}</strong> },
   { key: "customer", header: "Cliente", render: (o) => o.operational?.customerName ?? o.customerName ?? "—" },
-  { key: "total", header: "Valor do pedido", sortKey: "netTotal", render: (o) => formatMoney(o.netTotal) },
+  { key: "total", header: "Valor do pedido", sortKey: "netTotal", render: (o) => <OrderAmount value={o.netTotal} unknown={o.totalsUnknown} /> },
   { key: "invoice", header: "Nota fiscal", render: (o) => <StatePill spec={invoiceSpec(o.operational?.invoice)} title={o.operational?.invoice.reason} /> },
   {
     key: "actions",
     header: "Ações",
     render: (o) => (
-      <Link to={`/erp/notas-fiscais/pedidos/${encodeURIComponent(o.id)}/montagem`} onClick={(event) => event.stopPropagation()}>
+      <ActionLink
+        rule={o.operational?.actions?.invoice}
+        to={`/erp/notas-fiscais/pedidos/${encodeURIComponent(o.id)}/montagem`}
+        onClick={(event) => event.stopPropagation()}
+      >
         Abrir montagem
-      </Link>
+      </ActionLink>
     ),
   },
 ];

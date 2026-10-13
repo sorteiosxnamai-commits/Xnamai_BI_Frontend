@@ -60,6 +60,19 @@ export const capabilitiesSchema = obj({
   items: z.array(capabilitySchema),
 });
 
+export const phaseSchema = z.enum(["done", "running", "denied", "error", "not_started"]);
+export type SyncPhase = z.infer<typeof phaseSchema>;
+
+export const pendingReferenceSchema = obj({
+  resource: z.string(),
+  field: z.string(),
+  target: z.string(),
+  pending: z.number(),
+  distinctIds: z.number().optional(),
+  reasonCode: nstr,
+  reason: nstr,
+});
+
 export const overviewSchema = obj({
   connectionId: z.string(),
   generatedAt: z.string(),
@@ -71,18 +84,20 @@ export const overviewSchema = obj({
       resource: z.string(),
       label: z.string(),
       status: z.string(),
+      phase: phaseSchema.optional(),
       records: z.number().nullable(),
+      recordsPartial: z.boolean().optional(),
       dataThrough: nstr,
       lastSuccessAt: nstr,
+      lastAttemptAt: nstr,
       unresolved: z.number().nullable().optional(),
       error: nstr,
     }),
   ),
+  phases: z.record(z.string(), z.number()).optional(),
   operations: z.record(z.string(), z.number()),
   openConflicts: z.number(),
-  pendingReferences: z.array(
-    obj({ resource: z.string(), field: z.string(), target: z.string(), pending: z.number() }),
-  ),
+  pendingReferences: z.array(pendingReferenceSchema),
 });
 export type Overview = z.infer<typeof overviewSchema>;
 
@@ -198,12 +213,19 @@ export const stateRefSchema = obj({
 });
 export type StateRef = z.infer<typeof stateRefSchema>;
 
+/** Elegibilidade para ação local, com o motivo vindo do backend (mesma regra que ele aplica). */
+export const actionRuleSchema = obj({ allowed: z.boolean(), code: nstr, reason: nstr });
+export type ActionRule = z.infer<typeof actionRuleSchema>;
+
 export const operationalSchema = obj({
   customerName: nstr,
   responsible: obj({ sellerId: nstr, name: nstr }),
   state: obj({ code: z.string(), label: z.string() }),
   itemsPreview: z.array(obj({ name: nstr, code: nstr, quantity: nstr })),
-  totals: obj({ gross: money, discount: money, freight: money, net: money }),
+  totals: obj({ gross: money, discount: money, freight: money, net: money, unknown: z.boolean().optional() }),
+  actions: z
+    .object({ shipping: actionRuleSchema, invoice: actionRuleSchema, receivable: actionRuleSchema })
+    .optional(),
   pendencies: z.array(obj({ code: z.string(), label: z.string() })),
   lastExternalUpdateAt: nstr,
   lastHumanAction: obj({ at: nstr, operator: nstr, action: nstr }).nullable().optional(),
@@ -225,7 +247,24 @@ export const operationalSummarySchema = obj({
   filters: z.record(z.string(), z.unknown()),
   coverage: obj({ complete: z.boolean(), resources: z.record(z.string(), z.string()), note: nstr }),
   orders: obj({ count: z.number(), byKind: z.record(z.string(), z.number()) }),
-  values: obj({ net: money, gross: money, note: nstr }),
+  values: obj({
+    net: money,
+    gross: money,
+    note: nstr,
+    sold: obj({
+      count: z.number(),
+      net: money,
+      excludes: z.array(z.string()).optional(),
+      unknownTotals: z.number().optional(),
+    }).optional(),
+    byKind: z.record(z.string(), obj({ count: z.number(), net: money })).optional(),
+  }),
+  dates: obj({
+    orderDate: obj({ min: nstr, max: nstr }),
+    sourceUpdatedAtMax: nstr,
+    capturedAtMax: nstr,
+    checkpoint: obj({ status: z.string(), cursor: nstr, dataThrough: nstr, lastAttemptAt: nstr }),
+  }).optional(),
   variation: obj({ available: z.boolean(), reason: nstr, percent: nstr, previousNet: money }),
   payment: obj({
     byStatus: z.record(z.string(), z.number()),
@@ -352,7 +391,8 @@ const variation = obj({ available: z.boolean(), reason: nstr, percent: nstr, pre
 
 export const financeSummarySchema = obj({
   period: obj({ from: nstr, to: nstr }),
-  sales: obj({ orders: z.number(), net: money, variation }),
+  sales: obj({ orders: z.number(), net: money, variation, excludes: z.array(z.string()).optional() }),
+  coverage: obj({ complete: z.boolean(), resources: z.record(z.string(), z.string()), note: nstr }).optional(),
   cash: obj({ received: money, reversed: money, net: money, variation }),
   receivable: obj({ open: money, overdue: money }),
   refunds: obj({
@@ -460,6 +500,7 @@ export const orderSchema = obj({
   netTotal: money,
   grossTotal: money,
   discountTotal: money,
+  totalsUnknown: z.boolean().optional(),
   itemCount: z.number().nullable().optional(),
   itemsComplete: z.boolean(),
   statuses: orderStatusesSchema,
@@ -468,7 +509,17 @@ export const orderSchema = obj({
 });
 export type Order = z.infer<typeof orderSchema>;
 
+export const referenceSchema = obj({
+  id: nstr,
+  name: nstr,
+  state: z.enum(["resolved", "unavailable", "absent"]),
+  reasonCode: nstr,
+  reason: nstr,
+});
+export type Reference = z.infer<typeof referenceSchema>;
+
 export const orderDetailSchema = orderSchema.extend({
+  references: z.record(z.string(), referenceSchema).optional(),
   orderTypeId: nstr,
   paymentConditionId: nstr,
   priceTableId: nstr,
@@ -576,8 +627,26 @@ export const integrationStatusSchema = obj({
       label: z.string(),
       upstream: z.string(),
       localRecords: z.number().nullable(),
+      localRecordsPartial: z.boolean().optional(),
+      capability: obj({
+        implementedInErp: z.boolean().nullable().optional(),
+        enabled: z.boolean().nullable().optional(),
+        accountAccess: nstr,
+        supportedByAdaptor: z.boolean().nullable().optional(),
+        reason: nstr,
+      }).optional(),
+      lastIncremental: obj({
+        finishedAt: nstr,
+        received: z.number(),
+        persisted: z.number(),
+        unchanged: z.number(),
+        cursorAfter: nstr,
+      })
+        .nullable()
+        .optional(),
       unmappedFields: z.number(),
       status: z.string(),
+      phase: phaseSchema.optional(),
       cursor: nstr,
       transportCursor: nstr,
       dataThrough: nstr,
@@ -589,9 +658,7 @@ export const integrationStatusSchema = obj({
     }),
   ),
   jobs: z.record(z.string(), z.number()),
-  pendingReferences: z.array(
-    obj({ resource: z.string(), field: z.string(), target: z.string(), pending: z.number() }),
-  ),
+  pendingReferences: z.array(pendingReferenceSchema),
 });
 export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
 
@@ -838,3 +905,94 @@ export const auditSchema = obj({
 });
 
 export const idSchema = obj({ id: z.number() });
+
+const rangeSchema = obj({ min: nstr, max: nstr });
+export const ordersDiagnosticsSchema = obj({
+  generatedAt: nstr,
+  checkpoint: obj({
+    status: z.string(),
+    cursor: nstr,
+    dataThrough: nstr,
+    lastAttemptAt: nstr,
+    lastSuccessAt: nstr,
+    recordsPersistedTotal: z.number().nullable().optional(),
+  }),
+  mirror: obj({ orders: z.number(), orderDate: rangeSchema, sourceUpdatedAtMax: nstr, capturedAtMax: nstr }),
+  runs: obj({
+    recent: z.array(
+      obj({
+        runId: z.number(),
+        mode: z.string(),
+        status: z.string(),
+        startedAt: nstr,
+        finishedAt: nstr,
+        pages: z.number(),
+        received: z.number(),
+        persisted: z.number(),
+        unchanged: z.number(),
+        cursorBefore: nstr,
+        cursorAfter: nstr,
+        error: nstr,
+      }),
+    ),
+    restartsRecorded: z.number(),
+    restartTimes: z.array(nstr),
+    received: z.number(),
+    persisted: z.number(),
+    unchanged: z.number(),
+    rereadRatio: z.number().nullable(),
+    intentionalOverlapSeconds: z.number(),
+  }),
+  findings: z.array(obj({ code: z.string(), message: z.string() })),
+  jobs: obj({
+    processing: z.array(obj({ jobId: z.number(), kind: z.string(), resource: nstr, mode: z.string() })),
+    queued: z.array(obj({ jobId: z.number(), kind: z.string(), resource: nstr, mode: z.string() })),
+    oldestQueuedAgeMinutes: z.number().nullable(),
+    blockedBehindProcessing: z.boolean(),
+  }),
+  hydration: obj({ pendingOrders: z.number(), note: nstr }),
+  ordersWithoutItems: obj({ total: z.number(), byKind: z.record(z.string(), z.number()), orderDate: rangeSchema }),
+  ordersWithoutCustomer: obj({
+    customerIdMissingInMirror: obj({
+      orders: z.number(),
+      distinctCustomerIds: z.number(),
+      sampleCustomerIds: z.array(z.string()),
+      orderDate: rangeSchema,
+      reasonCode: nstr,
+      reason: nstr,
+    }),
+    withoutCustomerIdInSource: z.number(),
+  }),
+  unresolvedReferences: z.array(pendingReferenceSchema),
+});
+export type OrdersDiagnostics = z.infer<typeof ordersDiagnosticsSchema>;
+
+export const reconciliationSchema = obj({
+  resource: z.string(),
+  readOnly: z.boolean(),
+  asOf: nstr,
+  asOfBasis: z.string(),
+  scope: obj({ dateFrom: nstr, dateTo: nstr, filters: z.string() }),
+  erp: obj({
+    count: z.number(),
+    checkpoint: obj({ status: z.string(), cursor: nstr, dataThrough: nstr, lastSuccessAt: nstr }),
+  }),
+  bi: obj({ count: z.number(), syncState: obj({ status: z.string(), cursor: nstr, lastSuccessAt: nstr }) }),
+  matched: z.number(),
+  totals: obj({ divergences: z.number(), explained: z.number(), unexplained: z.number() }),
+  divergences: z.array(
+    obj({
+      code: z.string(),
+      title: z.string(),
+      cause: nstr,
+      impact: z.string(),
+      fix: z.string(),
+      count: z.number(),
+      explained: z.number(),
+      unexplained: z.number(),
+      samples: z.array(z.record(z.string(), z.unknown())),
+    }),
+  ),
+  notes: z.array(z.string()),
+});
+export type Reconciliation = z.infer<typeof reconciliationSchema>;

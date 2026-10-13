@@ -31,7 +31,7 @@ import { StatePanel } from "../../components/StatePanel";
 import { Badge, CommandError, FieldError, Tabs, useFocusInvalid } from "../../components/ui";
 import { formatDay, formatInstant, formatMoney, parseMoneyInput } from "../../format";
 import { useScope } from "../../scope";
-import { PixCell, paymentSpec, StatePill } from "../orders/orderUi";
+import { OrderAmount, PixCell, paymentSpec, StatePill } from "../orders/orderUi";
 import { RefundStatus } from "../refunds/RefundsPage";
 import { FINANCE_STATE } from "./financeUi";
 
@@ -481,7 +481,7 @@ export function FinancePage() {
   const columns: Column<Order>[] = [
     { key: "number", header: "Pedido", sortKey: "number", render: (o) => <strong>#{o.number ?? o.id}</strong> },
     { key: "customer", header: "Cliente", render: (o) => o.operational?.customerName ?? o.customerName ?? "—" },
-    { key: "total", header: "Valor", sortKey: "netTotal", render: (o) => formatMoney(o.netTotal) },
+    { key: "total", header: "Valor", sortKey: "netTotal", render: (o) => <OrderAmount value={o.netTotal} unknown={o.totalsUnknown} /> },
     {
       key: "order",
       header: "Status do pedido",
@@ -530,6 +530,14 @@ export function FinancePage() {
       header: "Ação necessária",
       render: (o) => {
         const st = o.operational?.finance;
+        const blocked = o.operational?.actions?.receivable;
+        if (blocked && !blocked.allowed && (st?.state ?? "none") === "none") {
+          return (
+            <span className="erp-action-disabled" title={blocked.reason ?? undefined}>
+              Título indisponível<small className="erp-muted"> · {blocked.code === "order_cancelled" ? "pedido cancelado" : (blocked.reason ?? "regra do pedido")}</small>
+            </span>
+          );
+        }
         if (st?.deadline === "overdue" && st.state !== "paid") return <Pill tone="warn">Cobrar parcela vencida</Pill>;
         const text = NEXT_ACTION[st?.state ?? ""] ?? "—";
         return text === "—" ? <span className="erp-muted">—</span> : <Pill tone="warn">{text}</Pill>;
@@ -577,9 +585,13 @@ export function FinancePage() {
       )}
       <section className="erp-kpis" aria-label="Indicadores financeiros">
         <Kpi
-          title="Vendas (valor vendido)"
+          title={`Vendas — só pedidos (exclui cancelados e orçamentos)${s && !s.coverage?.complete ? " · parcial" : ""}`}
           value={s ? formatMoney(s.sales.net) : summary.isLoading ? "…" : "Indisponível"}
-          note={s ? `${s.sales.orders} pedidos · ${variationText(s.sales.variation)}` : undefined}
+          note={
+            s
+              ? `${s.sales.orders} pedidos · ${variationText(s.sales.variation)}${s.coverage && !s.coverage.complete ? " · carga de pedidos incompleta: total parcial" : ""}`
+              : undefined
+          }
           tone="ok"
           unavailable={!s && !summary.isLoading}
         />

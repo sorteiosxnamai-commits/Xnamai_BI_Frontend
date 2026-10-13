@@ -65,7 +65,7 @@ function financeSetup(options: { permissions?: string[]; route?: string; blob?: 
 
 test("indicadores separam vendas, caixa e a receber, mostram fórmulas e Pix indisponível", async () => {
   financeSetup();
-  expect(await screen.findByText("Vendas (valor vendido)")).toBeInTheDocument();
+  expect(await screen.findByText(/Vendas — só pedidos \(exclui cancelados e orçamentos\)/)).toBeInTheDocument();
   expect(await screen.findByText("R$ 5.000,00")).toBeInTheDocument();
   expect(screen.getByText("Recebido (caixa)")).toBeInTheDocument();
   expect(screen.getByText("R$ 1.000,00")).toBeInTheDocument(); // líquido de estornos

@@ -957,3 +957,36 @@
 .erp-sidebar .appearance-field {
   margin: auto 8px 0;
 }
+
+/* valores desconhecidos, ações bloqueadas, datas e fases de carga */
+.erp-amount-unknown small {
+  font-size: 11px;
+}
+.erp-action-disabled {
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
+.erp-action-disabled small {
+  font-size: 11px;
+}
+.erp-datestack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.erp-datestack small {
+  font-size: 11px;
+}
+.erp-dates-note {
+  margin: 4px 24px 0;
+  font-size: 12px;
+}
+.erp-phase-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 8px 0 0;
+}
+.erp-phase-row span {
+  white-space: nowrap;
+}
