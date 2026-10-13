@@ -3,8 +3,23 @@ import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
+import { AppearanceProvider } from "../../theme/AppearanceProvider";
 import type { Capability } from "../api/schemas";
 import { ErpContext, type ErpContextValue } from "../auth/context";
+
+// jsdom não implementa matchMedia; o seletor de aparência do menu o consulta
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia;
+}
 
 export const CONNECTION = "test";
 
@@ -56,11 +71,13 @@ export function renderErp(
     defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
   });
   const result = render(
-    <QueryClientProvider client={client}>
-      <ErpContext.Provider value={options.context ?? erpContext()}>
-        <MemoryRouter initialEntries={[options.route ?? "/"]}>{ui}</MemoryRouter>
-      </ErpContext.Provider>
-    </QueryClientProvider>,
+    <AppearanceProvider>
+      <QueryClientProvider client={client}>
+        <ErpContext.Provider value={options.context ?? erpContext()}>
+          <MemoryRouter initialEntries={[options.route ?? "/"]}>{ui}</MemoryRouter>
+        </ErpContext.Provider>
+      </QueryClientProvider>
+    </AppearanceProvider>,
   );
   return { ...result, client };
 }

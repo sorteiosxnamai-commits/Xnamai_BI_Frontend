@@ -1,7 +1,17 @@
 /* Painel operacional do ERP. Tudo sob .erp-shell: nenhuma regra afeta BI, CRM ou Análise Varejo. */
 .erp-shell {
   color-scheme: light;
-  /* tema claro fixo do painel; as telas herdadas do ERP (erp.css) leem estas variáveis */
+  /* tema claro (padrão); a variação escura segue a paleta do site (theme/appearance.css), no fim deste arquivo.
+     As telas herdadas do ERP (erp.css) leem estas variáveis */
+  --erp-sidebar-bg: #f8faff;
+  --erp-topbar-bg: rgba(244, 247, 252, 0.94);
+  --erp-banner-bg: #eaf2ff;
+  --erp-banner-border: #c9dcfb;
+  --erp-banner-text: #1c3f86;
+  --erp-purple-bg: #efe9fd;
+  --erp-purple-text: #5a3cb0;
+  --erp-scrim: rgba(20, 32, 61, 0.45);
+  --erp-popover-shadow: 0 12px 30px rgba(20, 32, 61, 0.14);
   --bg: #f4f7fc;
   --bg-elevated: #ffffff;
   --bg-muted: #f7f9fd;
@@ -50,7 +60,8 @@
   position: absolute;
   left: -9999px;
   top: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
+  color: var(--text);
   padding: 8px 12px;
   border-radius: 6px;
   z-index: 100;
@@ -69,7 +80,7 @@
   flex-direction: column;
   gap: 18px;
   padding: 18px 12px;
-  background: #f8faff;
+  background: var(--erp-sidebar-bg);
   border-right: 1px solid var(--border);
 }
 .erp-brand {
@@ -109,7 +120,7 @@
   box-shadow: inset 3px 0 0 var(--accent);
 }
 .erp-sidebar-foot {
-  margin: auto 8px 0;
+  margin: 0 8px;
   font-size: 11px;
   color: var(--text-subtle);
   line-height: 1.4;
@@ -129,7 +140,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
-  background: rgba(244, 247, 252, 0.94);
+  background: var(--erp-topbar-bg);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
 }
@@ -146,7 +157,7 @@
   height: 40px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 .erp-header-search input {
   flex: 1;
@@ -178,7 +189,7 @@
   padding: 0 12px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--text);
   font: inherit;
   cursor: pointer;
@@ -217,8 +228,8 @@
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(20, 32, 61, 0.14);
+  background: var(--bg-elevated);
+  box-shadow: var(--erp-popover-shadow);
 }
 .erp-user-menu {
   display: grid;
@@ -256,7 +267,7 @@
   padding: 6px 10px;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -305,10 +316,10 @@
   gap: 12px;
   margin: 16px 24px 0;
   padding: 12px 14px;
-  border: 1px solid #c9dcfb;
+  border: 1px solid var(--erp-banner-border);
   border-radius: 10px;
-  background: #eaf2ff;
-  color: #1c3f86;
+  background: var(--erp-banner-bg);
+  color: var(--erp-banner-text);
 }
 .erp-banner div {
   flex: 1;
@@ -360,7 +371,7 @@
   padding: 0 14px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--accent-strong);
   font: inherit;
   font-weight: 600;
@@ -398,7 +409,7 @@
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-elevated);
   border-left: 4px solid var(--border-strong);
 }
 .erp-kpi-ok {
@@ -440,7 +451,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 .erp-search-field {
   flex: 1 1 280px;
@@ -514,8 +525,8 @@
   color: var(--error-text);
 }
 .erp-pill-purple {
-  background: #efe9fd;
-  color: #5a3cb0;
+  background: var(--erp-purple-bg);
+  color: var(--erp-purple-text);
 }
 .erp-pill-neutral {
   background: var(--chip);
@@ -571,7 +582,7 @@
   height: 32px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--text);
   cursor: pointer;
 }
@@ -585,8 +596,8 @@
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(20, 32, 61, 0.14);
+  background: var(--bg-elevated);
+  box-shadow: var(--erp-popover-shadow);
 }
 .erp-row-menu-list a {
   padding: 9px 10px;
@@ -605,7 +616,7 @@
   z-index: 60;
   display: grid;
   place-items: center;
-  background: rgba(20, 32, 61, 0.45);
+  background: var(--erp-scrim);
   padding: 16px;
 }
 .erp-modal {
@@ -616,7 +627,7 @@
   gap: 12px;
   padding: 18px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 .erp-modal header {
   display: flex;
@@ -641,7 +652,7 @@
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--text);
   text-align: left;
   font: inherit;
@@ -667,7 +678,7 @@
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--text);
   text-decoration: none;
 }
@@ -719,7 +730,7 @@
     height: 40px;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
-    background: #fff;
+    background: var(--bg-elevated);
     color: var(--text);
     cursor: pointer;
   }
@@ -897,4 +908,52 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+/* variação escura: mesma paleta do tema escuro padrão do site (theme/appearance.css) */
+:root[data-theme="dark"] .erp-shell {
+  color-scheme: dark;
+  --bg: #101218;
+  --bg-elevated: #1a1c28;
+  --bg-muted: #161822;
+  --bg-hover: #242736;
+  --bg-nested: #14161f;
+  --text: #e8eaf2;
+  --text-muted: #9aa3b5;
+  --text-subtle: #7d8698;
+  --text-heading: #d5d8e4;
+  --border: #2c3040;
+  --border-strong: #3a3f52;
+  --accent: #7b7ef0;
+  --accent-strong: #6a6de6;
+  --accent-soft: #2a2d4a;
+  --accent-text: #b0b3ff;
+  --on-accent: #ffffff;
+  --input-bg: #14161f;
+  --success-bg: #15241e;
+  --success-border: #2d5a48;
+  --success-text: #4ec99a;
+  --warning-bg: #2a2316;
+  --warning-border: #6b5420;
+  --warning-text: #e2c07a;
+  --error-bg: #2a1619;
+  --error-border: #6b3339;
+  --error-text: #f0a0a8;
+  --chip: #2a2d3c;
+  --chip-text: #c2c8d8;
+  --erp-sidebar-bg: #0d0e16;
+  --erp-topbar-bg: rgba(16, 18, 24, 0.94);
+  --erp-banner-bg: #1c2540;
+  --erp-banner-border: #34437a;
+  --erp-banner-text: #b9c8f5;
+  --erp-purple-bg: #2b2548;
+  --erp-purple-text: #c9b8ff;
+  --erp-scrim: rgba(0, 0, 0, 0.6);
+  --erp-popover-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme="dark"] .erp-shell .appearance-field > span {
+  font-size: 10px;
+}
+.erp-sidebar .appearance-field {
+  margin: auto 8px 0;
 }

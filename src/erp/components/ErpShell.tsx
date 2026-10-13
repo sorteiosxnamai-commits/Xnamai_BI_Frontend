@@ -1,5 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { AppearanceSelect } from "../../theme/AppearanceSelect";
 import { useErp } from "../auth/context";
 import { periodLabel, periodSearch, presetPeriods, useScope } from "../scope";
 import { Icon, type IconName } from "./icons";
@@ -253,6 +254,7 @@ export function ErpShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
+        <AppearanceSelect />
         <p className="erp-sidebar-foot">Uso interno — cliente não acessa este painel.</p>
       </aside>
       {navOpen && <div className="erp-scrim" aria-hidden="true" onClick={() => setNavOpen(false)} />}
