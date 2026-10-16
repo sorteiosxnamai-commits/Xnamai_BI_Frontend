@@ -201,7 +201,7 @@ function BiApp() {
             </button>
           </div>
         </header>
-        {isAnalyticsRoute && (
+        {isAnalyticsRoute && location.pathname !== "/b2b-carts" && (
           <GlobalFilterBar
             filters={filters}
             activeCount={activeCount}
@@ -219,7 +219,9 @@ function BiApp() {
             <Routes>
               <Route path="/overview" element={<OverviewPage filters={filters} />} />
               <Route path="/orders" element={<OrdersPage filters={filters} />} />
-              <Route path="/b2b-carts" element={<B2bCartsPage filters={filters} />} />
+              <Route path="/b2b-carts" element={<B2bCartsPage filters={filters} filterBar={
+                <GlobalFilterBar filters={filters} activeCount={activeCount} onChange={updateFilters} onClear={clearFilters} />
+              } />} />
               <Route path="/products" element={<ProductsPage filters={filters} />} />
               <Route
                 path="/customers"
