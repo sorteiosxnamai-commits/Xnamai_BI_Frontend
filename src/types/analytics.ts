@@ -1,3 +1,17 @@
+export type CartStage = "open" | "possible_abandonment" | "converted" | "completed_quote" | "cancelled" | "other";
+export type CartMetric = { count: number; value: number };
+export type B2bCartsResponse = {
+  summary: Record<CartStage | "identified" | "openTotal", CartMetric> & {
+    conversionRate: number | null;
+    abandonedMinusConvertedValue: number;
+  };
+  items: { id: string; number: string; customerName: string | null; sellerName: string | null;
+    status: string; b2bStatus: number; stage: CartStage; total: number;
+    createdAt: string | null; updatedAt: string | null }[];
+  page: number; pageSize: number; totalItems: number; totalPages: number;
+  abandonmentHours: number; stage: string; appliedFilters: AppliedFilters; metadata: AnalyticsMetadata;
+};
+
 export type Period = "7d" | "30d" | "90d" | "365d" | "ytd" | "all";
 export type Granularity = "day" | "week" | "month" | "quarter" | "year";
 export type SortOrder = "asc" | "desc";

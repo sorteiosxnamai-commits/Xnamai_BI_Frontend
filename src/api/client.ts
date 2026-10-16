@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { authenticatedFetch } from "../auth/session";
 import type {
+  B2bCartsResponse,
+  CartStage,
   AnalyticsFilters,
   AssociationsResponse,
   BreakdownsResponse,
@@ -520,6 +522,26 @@ async function request<T>(path: string, schema: z.ZodType<T>): Promise<T> {
 }
 
 export const analyticsApi = {
+  b2bCarts(filters: AnalyticsFilters, abandonmentHours = 24, page = 1, stage: CartStage | "all" = "all"): Promise<B2bCartsResponse> {
+    const metric = z.object({ count: z.number(), value: z.coerce.number() });
+    const schema = z.object({
+      summary: z.object({
+        identified: metric, openTotal: metric, open: metric, possible_abandonment: metric,
+        converted: metric, completed_quote: metric, cancelled: metric, other: metric,
+        conversionRate: z.number().nullable(), abandonedMinusConvertedValue: z.coerce.number(),
+      }),
+      items: z.array(z.object({
+        id: z.string(), number: z.string(), customerName: z.string().nullable(),
+        sellerName: z.string().nullable(), status: z.string(), b2bStatus: z.number(),
+        stage: z.enum(["open", "possible_abandonment", "converted", "completed_quote", "cancelled", "other"]),
+        total: z.coerce.number(), createdAt: z.string().nullable(), updatedAt: z.string().nullable(),
+      })),
+      page: z.number(), pageSize: z.number(), totalItems: z.number(), totalPages: z.number(),
+      abandonmentHours: z.number(), stage: z.string(), appliedFilters: z.record(z.string(), z.unknown()),
+      metadata: metadataSchema,
+    });
+    return request(`/api/v1/analytics/b2b-carts?${paramsFromFilters(filters)}&abandonmentHours=${abandonmentHours}&page=${page}&stage=${stage}`, schema) as Promise<B2bCartsResponse>;
+  },
   configured: Boolean(API_URL),
   overview(filters: AnalyticsFilters): Promise<OverviewResponse> {
     return request(

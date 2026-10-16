@@ -32,6 +32,9 @@ const OverviewPage = lazyPage(() =>
 const OrdersPage = lazyPage(() =>
   import("../pages/OrdersPage").then((module) => ({ default: module.OrdersPage }))
 );
+const B2bCartsPage = lazyPage(() =>
+  import("../pages/B2bCartsPage").then((module) => ({ default: module.B2bCartsPage }))
+);
 const ProductsPage = lazyPage(() =>
   import("../pages/ProductsPage").then((module) => ({ default: module.ProductsPage }))
 );
@@ -67,6 +70,7 @@ const navigation: {
 }[] = [
   { path: "/overview", label: "Visão geral", icon: "⌂" },
   { path: "/orders", label: "Pedidos", icon: "▣" },
+  { path: "/b2b-carts", label: "Carrinhos B2B", icon: "▤" },
   { path: "/products", label: "Produtos", icon: "◇" },
   { path: "/customers", label: "Clientes", icon: "◎" },
   { path: "/retention", label: "Retenção e LTV", icon: "↗" },
@@ -123,6 +127,7 @@ function BiApp() {
   });
   const { filters, updateFilters, clearFilters, activeCount } = useAnalyticsFilters();
   const isAnalyticsRoute = [
+    "/b2b-carts",
     "/overview",
     "/orders",
     "/products",
@@ -214,6 +219,7 @@ function BiApp() {
             <Routes>
               <Route path="/overview" element={<OverviewPage filters={filters} />} />
               <Route path="/orders" element={<OrdersPage filters={filters} />} />
+              <Route path="/b2b-carts" element={<B2bCartsPage filters={filters} />} />
               <Route path="/products" element={<ProductsPage filters={filters} />} />
               <Route
                 path="/customers"
