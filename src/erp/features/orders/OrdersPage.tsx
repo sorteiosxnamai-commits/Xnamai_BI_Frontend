@@ -14,6 +14,7 @@ import {
 import { useErp } from "../../auth/context";
 import { Icon } from "../../components/icons";
 import { OrderPicker } from "../../components/OrderPicker";
+import { PeriodDataNotice } from "../../components/PeriodDataNotice";
 import { Pill } from "../../components/Pill";
 import { type Column, ServerList } from "../../components/ServerList";
 import { StatePanel } from "../../components/StatePanel";
@@ -329,6 +330,7 @@ export function OrdersPage() {
           unavailable={!s && !summary.isLoading}
         />
       </section>
+      <PeriodDataNotice from={scope.from} to={scope.to} empty={s?.orders.count === 0} />
       {s && <DatesNote summary={s} />}
       <section className="erp-filterbar" aria-label="Filtros de pedidos">
         <label className="erp-search-field">

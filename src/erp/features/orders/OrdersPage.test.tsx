@@ -65,6 +65,13 @@ const summary = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const importedDates = {
+  orderDate: { min: "2019-12-17", max: "2025-01-23" },
+  sourceUpdatedAtMax: null,
+  capturedAtMax: null,
+  checkpoint: { status: "running", cursor: null, dataThrough: null, lastAttemptAt: null },
+};
+
 function setup(
   items: unknown[],
   options: { summary?: unknown; route?: string; permissions?: string[]; status?: number } = {},
@@ -172,6 +179,20 @@ test("URL direta aplica busca, período e filtros desde a primeira consulta", as
   expect(list?.url).toContain("pending=false");
   expect(list?.url).toContain("include=operational");
   expect(screen.getByLabelText("Buscar por número do pedido, cliente ou produto")).toHaveValue("cerveja");
+});
+
+test("período vazio explica o intervalo já importado", async () => {
+  mockFetch((call) => {
+    if (call.url.startsWith("/operational-summary")) {
+      return { body: call.url.includes("dateFrom=")
+        ? summary({ orders: { count: 0, byKind: {} }, coverage: { complete: false, resources: { orders: "running" }, note: "Importação parcial." } })
+        : summary({ dates: importedDates, coverage: { complete: false, resources: { orders: "running" }, note: "Importação parcial." } }) };
+    }
+    if (call.url.startsWith("/sales-orders")) return { body: page([]) };
+  });
+  renderErp(<OrdersPage />, { route: "/erp/pedidos?from=2026-10-01&to=2026-10-19" });
+  expect(await screen.findByText("Período fora dos pedidos importados")).toBeInTheDocument();
+  expect(screen.getByText(/17\/12\/2019 – 23\/01\/2025/)).toBeInTheDocument();
 });
 
 test("sessão expirada é erro com aviso de login, nunca tabela vazia", async () => {
@@ -290,6 +311,22 @@ test("período rejeita data final anterior à inicial e aplica um intervalo vál
   await userEvent.click(within(dialog).getByRole("button", { name: "Aplicar período" }));
   expect(await screen.findByRole("button", { name: /10\/10\/2026 – 20\/10\/2026/ })).toBeInTheDocument();
   expect(screen.getByTestId("where").textContent).toContain("from=2026-10-10&to=2026-10-20");
+});
+
+test("seletor centralizado oferece o último mês já importado", async () => {
+  mockFetch((call) => {
+    if (call.url.startsWith("/operational-summary")) {
+      return { body: summary({ dates: importedDates }) };
+    }
+    return { body: page([]) };
+  });
+  renderErp(<ErpShell><Where /></ErpShell>, { route: "/erp/pedidos", context: erpContext(["*"]) });
+  await userEvent.click(screen.getByRole("button", { name: /Todo o período/ }));
+  const dialog = screen.getByRole("dialog", { name: "Escolher período" });
+  expect(dialog.closest(".erp-period-overlay")?.parentElement).toHaveClass("erp-shell");
+  expect(await within(dialog).findByText(/Pedidos importados de 17\/12\/2019 – 23\/01\/2025/)).toBeInTheDocument();
+  await userEvent.click(within(dialog).getByRole("button", { name: "Ver último mês importado" }));
+  expect(screen.getByTestId("where").textContent).toContain("from=2025-01-01&to=2025-01-23");
 });
 
 test("tela pequena: menu lateral abre e fecha com estado acessível", async () => {

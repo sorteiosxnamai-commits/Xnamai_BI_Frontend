@@ -1,6 +1,9 @@
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppearanceSelect } from "../../theme/AppearanceSelect";
+import { useErpQuery } from "../api/hooks";
+import { operationalSummarySchema } from "../api/schemas";
 import { useErp } from "../auth/context";
 import { periodLabel, periodSearch, presetPeriods, useScope } from "../scope";
 import { Icon, type IconName } from "./icons";
@@ -47,7 +50,16 @@ function PeriodPicker() {
   const [draftFrom, setDraftFrom] = useState(from ?? "");
   const [draftTo, setDraftTo] = useState(to ?? "");
   const panel = useId();
-  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  const available = useErpQuery(
+    ["overview-orders", { dateFrom: undefined, dateTo: undefined }],
+    "/operational-summary",
+    operationalSummarySchema,
+    { enabled: open, staleTime: 60_000 },
+  );
+  const firstImported = available.data?.dates?.orderDate.min;
+  const lastImported = available.data?.dates?.orderDate.max;
 
   useEffect(() => {
     setDraftFrom(from ?? "");
@@ -55,26 +67,28 @@ function PeriodPicker() {
   }, [from, to]);
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
-    const onClick = (event: MouseEvent) => {
-      if (root.current && !root.current.contains(event.target as Node)) setOpen(false);
+    dialog.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        button.current?.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onClick);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onClick);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
   const invalid = Boolean(draftFrom && draftTo && draftTo < draftFrom);
   function apply(nextFrom?: string, nextTo?: string) {
     set({ from: nextFrom, to: nextTo });
     setOpen(false);
+    button.current?.focus();
   }
+  const shell = document.querySelector(".erp-shell");
   return (
-    <div className="erp-period" ref={root}>
+    <div className="erp-period">
       <button
+        ref={button}
         type="button"
         className="erp-period-button"
         aria-expanded={open}
@@ -85,8 +99,25 @@ function PeriodPicker() {
         <span>{periodLabel(from, to)}</span>
         <Icon name="chevron" size={14} />
       </button>
-      {open && (
-        <div className="erp-period-panel" id={panel} role="dialog" aria-label="Escolher período">
+      {open && shell && createPortal(
+        <div className="erp-period-overlay">
+        <button type="button" className="erp-period-backdrop" aria-label="Fechar seletor de período" onClick={() => {
+          setOpen(false);
+          button.current?.focus();
+        }} />
+        <div className="erp-period-panel" id={panel} role="dialog" aria-modal="true" aria-label="Escolher período" ref={dialog} tabIndex={-1}>
+          <div className="erp-period-heading">
+            <div>
+              <h2>Escolher período</h2>
+              <p>Filtre pela data do pedido no espelho Mercos.</p>
+            </div>
+            <button type="button" className="erp-period-close" aria-label="Fechar período" onClick={() => {
+              setOpen(false);
+              button.current?.focus();
+            }}>
+              <Icon name="close" />
+            </button>
+          </div>
           <div className="erp-period-presets">
             {presetPeriods().map((preset) => (
               <button key={preset.label} type="button" onClick={() => apply(preset.from, preset.to)}>
@@ -94,6 +125,18 @@ function PeriodPicker() {
               </button>
             ))}
           </div>
+          {firstImported && lastImported && (
+            <div className="erp-period-coverage">
+              <span>Pedidos importados de {periodLabel(firstImported, lastImported)}.</span>
+              <button
+                type="button"
+                onClick={() => apply(`${lastImported.slice(0, 7)}-01`, lastImported)}
+              >
+                Ver último mês importado
+              </button>
+              {!available.data?.coverage.complete && <small>A carga ainda está em andamento; datas mais recentes podem estar vazias.</small>}
+            </div>
+          )}
           <div className="erp-period-fields">
             <label>
               De
@@ -123,6 +166,7 @@ function PeriodPicker() {
             </button>
           </div>
         </div>
+        </div>, shell,
       )}
     </div>
   );

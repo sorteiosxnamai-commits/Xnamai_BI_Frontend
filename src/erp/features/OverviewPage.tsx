@@ -3,6 +3,7 @@ import { buildQuery } from "../api/client";
 import { useErpQuery } from "../api/hooks";
 import { operationalSummarySchema, overviewSchema } from "../api/schemas";
 import { StatePanel } from "../components/StatePanel";
+import { PeriodDataNotice } from "../components/PeriodDataNotice";
 import { PageHeader, PhaseBadge } from "../components/ui";
 import { formatInstant, formatMoney } from "../format";
 import { periodLabel, useScope } from "../scope";
@@ -88,6 +89,7 @@ function OrdersSummary() {
           <small>{s.coverage.note ?? "Pedidos e clientes sincronizados."}</small>
         </div>
       </div>
+      <PeriodDataNotice from={from} to={to} empty={s.orders.count === 0} />
       <DatesNote summary={s} />
     </section>
   );
