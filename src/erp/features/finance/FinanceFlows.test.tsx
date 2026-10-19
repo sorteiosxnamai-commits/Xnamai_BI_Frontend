@@ -49,11 +49,11 @@ const refundRow = (extra: Record<string, unknown> = {}) => ({
   statement: "Solicitação registrada. Não altera nenhuma baixa e não devolve dinheiro.", ...extra,
 });
 
-function financeSetup(options: { permissions?: string[]; route?: string; blob?: { status?: number; body?: unknown } } = {}) {
+function financeSetup(options: { permissions?: string[]; route?: string; blob?: { status?: number; body?: unknown }; summaryBody?: unknown } = {}) {
   const calls: Call[] = [];
   mockFetch((call) => {
     calls.push(call);
-    if (call.url.startsWith("/finance/orders-summary")) return { body: summary() };
+    if (call.url.startsWith("/finance/orders-summary")) return { body: options.summaryBody ?? summary() };
     if (call.url.startsWith("/finance/orders-report.csv")) return options.blob ?? { body: "pedido;cliente\n10;Casa Flor" };
     if (call.url.startsWith("/refund-requests")) return { body: page([refundRow()]) };
     if (call.url.startsWith("/sales-orders")) return { body: page([order({}, { state: "open", price: "300.00", deadline: "overdue" })]) };
@@ -78,6 +78,20 @@ test("indicadores separam vendas, caixa e a receber, mostram fórmulas e Pix ind
   expect(within(pix).getByText("Indisponível")).toBeInTheDocument();
   await userEvent.click(screen.getByText("Como cada indicador é calculado"));
   expect(screen.getByText(/Não é valor recebido/)).toBeInTheDocument();
+});
+
+test("período sem vendas carregadas não apresenta zero como total definitivo", async () => {
+  financeSetup({
+    route: "/erp/financeiro?from=2026-10-01&to=2026-10-31",
+    summaryBody: summary({
+      period: { from: "2026-10-01", to: "2026-10-31" },
+      sales: { orders: 0, net: "0.00", variation: { available: false, reason: "Importação parcial" } },
+      coverage: { complete: false, resources: { orders: "running", customers: "success" }, note: "Importação parcial." },
+    }),
+  });
+  const sales = (await screen.findByText(/Vendas — só pedidos/)).closest(".erp-kpi") as HTMLElement;
+  await waitFor(() => expect(within(sales).getByText("Indisponível")).toBeInTheDocument());
+  expect(within(sales).getByText(/sincronização de pedidos incompleta/i)).toBeInTheDocument();
 });
 
 test("tabela separa situação financeira local do pagamento do Mercos e não inventa Pix", async () => {

@@ -42,6 +42,7 @@
   --chip-text: #4b5873;
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
+  width: 100%;
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
@@ -129,6 +130,7 @@
 /* topo */
 .erp-main {
   min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -136,23 +138,31 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 12px;
   padding: 12px 24px;
   background: var(--erp-topbar-bg);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
 }
+.erp-topbar-inner {
+  width: 100%;
+  max-width: 1440px;
+  min-width: 0;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+  align-items: center;
+  gap: clamp(12px, 2vw, 28px);
+}
 .erp-menu-toggle {
   display: none;
 }
 .erp-header-search {
-  flex: 1;
+  min-width: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 520px;
+  max-width: 560px;
   padding: 0 12px;
   height: 40px;
   border: 1px solid var(--border-strong);
@@ -178,7 +188,7 @@
   position: relative;
 }
 .erp-period {
-  margin-left: auto;
+  min-width: 0;
 }
 .erp-period-button,
 .erp-user-button {
@@ -197,6 +207,7 @@
 .erp-user-button {
   border-color: transparent;
   background: transparent;
+  max-width: min(250px, 22vw);
 }
 .erp-avatar {
   display: grid;
@@ -211,8 +222,14 @@
 }
 .erp-user-text {
   display: grid;
+  min-width: 0;
   text-align: left;
   line-height: 1.2;
+}
+.erp-user-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .erp-user-text small {
   color: var(--text-subtle);
@@ -253,13 +270,13 @@
   background: var(--bg-hover);
 }
 .erp-period-panel {
-  width: 300px;
+  width: min(440px, calc(100vw - 32px));
   display: grid;
   gap: 10px;
 }
 .erp-period-presets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 .erp-period-presets button,
@@ -289,7 +306,7 @@
 }
 .erp-period-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 .erp-period-fields label {
@@ -299,6 +316,8 @@
   color: var(--text-muted);
 }
 .erp-period-fields input {
+  width: 100%;
+  min-width: 0;
   height: 34px;
   padding: 0 8px;
   border: 1px solid var(--border-strong);
@@ -314,7 +333,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 16px 24px 0;
+  width: calc(100% - 48px);
+  max-width: 1392px;
+  margin: 16px auto 0;
   padding: 12px 14px;
   border: 1px solid var(--erp-banner-border);
   border-radius: 10px;
@@ -336,10 +357,18 @@
 }
 .erp-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-content: start;
+  width: 100%;
+  max-width: 1440px;
+  min-width: 0;
+  margin-inline: auto;
   padding: 20px 24px 40px;
   outline: none;
+}
+.erp-page > * {
+  min-width: 0;
 }
 .erp-pagehead {
   display: flex;
@@ -400,11 +429,13 @@
 /* indicadores */
 .erp-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 14px;
 }
 .erp-kpi {
   display: grid;
+  min-width: 0;
+  min-height: 124px;
   gap: 4px;
   padding: 16px;
   border: 1px solid var(--border);
@@ -429,9 +460,11 @@
   color: var(--text-muted);
 }
 .erp-kpi strong {
-  font-size: 30px;
+  font-size: clamp(22px, 2vw, 30px);
   line-height: 1.1;
   color: var(--text-heading);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 .erp-kpi .erp-kpi-unavailable {
   font-size: 18px;
@@ -545,13 +578,17 @@
 /* tabela: rolagem horizontal só dentro da tabela */
 .erp-shell .erp-card {
   border-radius: 12px;
+  min-width: 0;
 }
 .erp-shell .erp-table-wrap {
   overflow-x: auto;
+  min-width: 0;
+  width: 100%;
   max-width: 100%;
 }
 .erp-shell .erp-table {
   width: 100%;
+  min-width: max-content;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -695,11 +732,6 @@
 }
 
 /* telas pequenas: lateral recolhível, filtros em coluna, rolagem só na tabela */
-@media (max-width: 1100px) {
-  .erp-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 @media (max-width: 900px) {
   .erp-shell {
     grid-template-columns: minmax(0, 1fr);
@@ -735,8 +767,12 @@
     cursor: pointer;
   }
   .erp-topbar {
-    flex-wrap: wrap;
     padding: 10px 14px;
+  }
+  .erp-topbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
   .erp-header-search {
     order: 3;
@@ -744,15 +780,18 @@
     max-width: none;
   }
   .erp-period {
-    margin-left: 0;
+    margin-left: auto;
   }
   .erp-user-text {
     display: none;
   }
   .erp-banner,
   .erp-page {
-    margin-left: 14px;
-    margin-right: 14px;
+    width: calc(100% - 28px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .erp-page {
     padding-left: 0;
     padding-right: 0;
   }
@@ -764,7 +803,19 @@
   }
 }
 @media (max-width: 560px) {
-  .erp-kpis {
+  .erp-period-panel {
+    position: fixed;
+    top: 112px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100dvh - 124px);
+    overflow-y: auto;
+  }
+  .erp-period-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .erp-period-fields {
     grid-template-columns: minmax(0, 1fr);
   }
   .erp-pagehead-actions {

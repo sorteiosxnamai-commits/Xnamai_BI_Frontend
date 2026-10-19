@@ -260,18 +260,20 @@ export function ErpShell({ children }: { children: ReactNode }) {
       {navOpen && <div className="erp-scrim" aria-hidden="true" onClick={() => setNavOpen(false)} />}
       <div className="erp-main">
         <header className="erp-topbar">
-          <button
-            type="button"
-            className="erp-menu-toggle"
-            aria-label={navOpen ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={navOpen}
-            onClick={() => setNavOpen((current) => !current)}
-          >
-            <Icon name={navOpen ? "close" : "menu"} />
-          </button>
-          <HeaderSearch />
-          <PeriodPicker />
-          <UserMenu />
+          <div className="erp-topbar-inner">
+            <button
+              type="button"
+              className="erp-menu-toggle"
+              aria-label={navOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen((current) => !current)}
+            >
+              <Icon name={navOpen ? "close" : "menu"} />
+            </button>
+            <HeaderSearch />
+            <PeriodPicker />
+            <UserMenu />
+          </div>
         </header>
         {banner && (
           <div className="erp-banner" role="note">

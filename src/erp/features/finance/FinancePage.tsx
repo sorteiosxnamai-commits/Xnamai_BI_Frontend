@@ -458,6 +458,7 @@ export function FinancePage() {
     { enabled: can("refunds:read") },
   );
   const s = summary.data;
+  const salesUnknown = Boolean(s?.coverage && !s.coverage.complete && (scope.from || scope.to) && s.sales.orders === 0);
 
   async function exportReport() {
     setExportError(null);
@@ -586,14 +587,16 @@ export function FinancePage() {
       <section className="erp-kpis" aria-label="Indicadores financeiros">
         <Kpi
           title={`Vendas — só pedidos (exclui cancelados e orçamentos)${s && !s.coverage?.complete ? " · parcial" : ""}`}
-          value={s ? formatMoney(s.sales.net) : summary.isLoading ? "…" : "Indisponível"}
+          value={salesUnknown ? "Indisponível" : s ? formatMoney(s.sales.net) : summary.isLoading ? "…" : "Indisponível"}
           note={
-            s
+            salesUnknown
+              ? "Nenhum pedido carregado no período; sincronização de pedidos incompleta."
+              : s
               ? `${s.sales.orders} pedidos · ${variationText(s.sales.variation)}${s.coverage && !s.coverage.complete ? " · carga de pedidos incompleta: total parcial" : ""}`
               : undefined
           }
           tone="ok"
-          unavailable={!s && !summary.isLoading}
+          unavailable={salesUnknown || (!s && !summary.isLoading)}
         />
         <Kpi
           title="Recebido (caixa)"
