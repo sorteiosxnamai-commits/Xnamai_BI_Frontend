@@ -59,12 +59,13 @@ afterEach(() => {
 });
 
 test("autorizado: /me e /capabilities liberam o conteúdo", async () => {
-  mockFetch((call) => {
+  const mock = mockFetch((call) => {
     if (call.url === "/me") return { body: ME };
     if (call.url === "/capabilities") return { body: { connectionId: "test", items: [cap("write.customers")] } };
   });
   renderGuard();
   expect(await screen.findByText("CONTEÚDO ERP")).toBeInTheDocument();
+  expect(mock.calls.map((call) => call.url)).not.toContain("/auth/refresh");
 });
 
 test("módulo desativado (404 erp_disabled) tem tela própria", async () => {

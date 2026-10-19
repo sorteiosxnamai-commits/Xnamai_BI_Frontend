@@ -59,3 +59,21 @@ test("401 renovado repete a chamada uma vez e devolve os dados", async () => {
   expect(data.items).toEqual([1]);
   expect(n).toBe(2);
 });
+
+test("401 persistente após renovar a sessão avisa o guard e não mostra lista vazia", async () => {
+  session.refreshSession.mockResolvedValue({ accessToken: "novo" });
+  const fetchMock = vi.fn(async () => new Response("{}", { status: 401 }));
+  vi.stubGlobal("fetch", fetchMock);
+  const expired = vi.fn();
+  window.addEventListener(ERP_AUTH_EXPIRED, expired);
+  try {
+    const error = await erpRequest("/sales-orders?dateFrom=2025-01-01", z.object({ items: z.array(z.unknown()) }))
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(ErpApiError);
+    expect(error.code).toBe("session_expired");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(expired).toHaveBeenCalledTimes(1);
+  } finally {
+    window.removeEventListener(ERP_AUTH_EXPIRED, expired);
+  }
+});

@@ -35,8 +35,12 @@ export function ErpGuard({ children }: { children: ReactNode }) {
     if (phase !== "checking") return;
     let cancelled = false;
     (async () => {
-      if (await erpRefresh()) return "ready" as Phase;
+      // O AuthProvider já renovou a sessão do BI antes de liberar este guard.
+      // Nesse caso não há cookie ERP a renovar: a tentativa gerava um 401
+      // desnecessário em toda abertura do painel pelo administrador do BI.
+      if (erpAccessToken()) return "ready" as Phase;
       if (user) return "ready" as Phase;
+      if (await erpRefresh()) return "ready" as Phase;
       try {
         return (await refreshSession()) ? ("ready" as Phase) : ("login" as Phase);
       } catch {

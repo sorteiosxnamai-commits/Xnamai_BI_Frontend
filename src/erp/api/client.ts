@@ -63,7 +63,7 @@ export async function erpRequest<T>(
       // escritas ainda não aceitas, pois 401 nunca chegou à regra de negócio).
       const renewed = erpAccessToken() ? await erpRefresh() : await refreshSession();
       if (renewed) response = await send(url, options, controller.signal);
-      if (!renewed && response.status === 401) {
+      if (response.status === 401) {
         // Sem como renovar (cookie de renovação ausente/expirado): é falha de autenticação,
         // nunca uma lista vazia. A interface volta ao login e explica o motivo.
         window.dispatchEvent(new Event(ERP_AUTH_EXPIRED));
@@ -118,7 +118,7 @@ export async function erpDownload(path: string): Promise<{ blob: Blob; truncated
     if (response.status === 401) {
       const renewed = erpAccessToken() ? await erpRefresh() : await refreshSession();
       if (renewed) response = await send(url, {}, controller.signal);
-      if (!renewed && response.status === 401) {
+      if (response.status === 401) {
         window.dispatchEvent(new Event(ERP_AUTH_EXPIRED));
         throw new ErpApiError(401, "session_expired", "Sessão expirada. Entre novamente para continuar.");
       }
