@@ -9,7 +9,6 @@ export const SETTINGS_ENTRIES: Entry[] = [
   { to: "/erp/capacidades", title: "Capacidades", text: "O que está liberado, bloqueado ou pendente nesta conta e neste ambiente." },
   { to: "/erp/admin", title: "Operadores e permissões", text: "Usuários do ERP, papéis, senhas temporárias e auditoria.", permission: "*" },
   { to: "/erp/clientes", title: "Clientes", text: "Cadastro espelhado do Mercos e dados locais." },
-  { to: "/erp/produtos", title: "Produtos", text: "Catálogo, preços por tabela e variantes." },
   { to: "/erp/cadastros", title: "Cadastros auxiliares", text: "Tabelas de preço, condições de pagamento, categorias, vendedores e outros." },
   { to: "/erp/compras", title: "Compras e fornecedores", text: "Pedidos de compra, recebimentos e estornos.", permission: "purchases:read" },
   { to: "/erp/estoque", title: "Estoque", text: "Saldos, movimentos, reservas e autoridade do estoque.", permission: "inventory:read" },

@@ -165,6 +165,9 @@ export const productSchema = obj({
   minimumPrice: money,
   externalStock: money,
   active: z.boolean().nullable().optional(),
+  imageUrl: nstr,
+  onMercos: z.boolean().optional(),
+  localOnly: z.boolean().optional(),
   ...metaShape,
 });
 export type Product = z.infer<typeof productSchema>;
