@@ -162,9 +162,12 @@ function textOrNull(value: string): string | null {
 export function ProductEditor({
   product,
   onSaved,
+  onClose,
 }: {
   product?: ProductDetail;
   onSaved?: (product: ProductDetail) => void;
+  /** Cadastro aberto na modal da lista: fecha em vez de ir para a página do produto. */
+  onClose?: () => void;
 }) {
   const [baseline, setBaseline] = useState<ProductDetail | undefined>(product);
   const initial = baseline ? fromProduct(baseline) : EMPTY;
@@ -282,7 +285,10 @@ export function ProductEditor({
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const saved = await persist();
-    if (saved && !product) navigate(`/erp/produtos/${encodeURIComponent(saved.id)}`);
+    if (saved && !product) {
+      if (onClose) onClose();
+      else navigate(`/erp/produtos/${encodeURIComponent(saved.id)}`);
+    }
   }
 
   async function subir() {
@@ -299,7 +305,7 @@ export function ProductEditor({
     if (!result) return;
     setOperationId(result.operationId);
     setStockNote(result.stockPublish && result.stockPublish !== "queued" ? result.stockPublish : null);
-    if (!product) {
+    if (!product && !onClose) {
       navigate(`/erp/produtos/${encodeURIComponent(saved.id)}`, { state: { operationId: result.operationId } });
     }
   }
@@ -320,7 +326,7 @@ export function ProductEditor({
 
   return (
     <form ref={invalidFocus.ref} className="erp-card erp-form" onSubmit={onSubmit} noValidate aria-label={product ? "Editar produto" : "Novo produto"}>
-      <h3 className="erp-wide">{product ? "Dados do produto" : "Novo produto"}</h3>
+      {!onClose && <h3 className="erp-wide">{product ? "Dados do produto" : "Novo produto"}</h3>}
       <label className="erp-field erp-wide">
         <span>Nome *</span>
         <input value={state.name} onChange={(event) => set("name", event.target.value)} aria-invalid={Boolean(show("name"))} />
@@ -521,7 +527,13 @@ export function ProductEditor({
             Confirmar exclusão
           </button>
         )}
-        <Link className="erp-btn" to="/erp/produtos">Voltar à lista</Link>
+        {onClose ? (
+          <button type="button" className="erp-btn" disabled={busy} onClick={onClose}>
+            Cancelar
+          </button>
+        ) : (
+          <Link className="erp-btn" to="/erp/produtos">Voltar à lista</Link>
+        )}
       </div>
       <div className="erp-wide">
         <CommandError error={save.error} />

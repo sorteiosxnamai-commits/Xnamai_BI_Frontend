@@ -41,7 +41,18 @@ export function ProductDetailPage() {
       )}
       {seeded && <OperationTracker operationId={seeded} />}
       <div className="erp-product-layout">
-        <ProductPhoto name={product.name} url={product.imageUrl} />
+        <div>
+          <ProductPhoto name={product.name} url={product.imageUrl || product.photos?.[0]} />
+          {(product.photos ?? []).length > 1 && (
+            <div className="erp-product-thumbs">
+              {product.photos?.map((url) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer">
+                  <img src={url} alt="" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
         {writable ? (
           <ProductEditor product={product} onSaved={() => void query.refetch()} />
         ) : (

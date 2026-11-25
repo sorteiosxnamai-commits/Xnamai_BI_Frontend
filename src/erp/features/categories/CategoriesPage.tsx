@@ -9,6 +9,10 @@ type Draft = { id: string | null; name: string; parentId: string; active: boolea
 
 const emptyDraft = (): Draft => ({ id: null, name: "", parentId: "", active: true, version: 1 });
 
+function fold(value: string) {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
 export function CategoriesPage() {
   const { can } = useErp();
   const writable = can("products:write");
@@ -20,7 +24,15 @@ export function CategoriesPage() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [touched, setTouched] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const items = query.data?.items ?? [];
+  const term = fold(search.trim());
+  const visible = term
+    ? items.filter((item) => {
+        const parent = items.find((candidate) => candidate.id === item.parentId);
+        return fold(item.name).includes(term) || fold(parent?.name ?? "").includes(term);
+      })
+    : items;
   const nameError = touched && !draft.name.trim() ? "Informe o nome da categoria." : undefined;
 
   function edit(item: Category) {
@@ -82,13 +94,29 @@ export function CategoriesPage() {
       {query.error && <StatePanel kind="error" message={(query.error as Error).message} onRetry={() => void query.refetch()} />}
       {query.data && items.length === 0 && <StatePanel kind="empty" message="Nenhuma categoria cadastrada." />}
       {items.length > 0 && (
+        <form className="erp-toolbar" onSubmit={(event) => event.preventDefault()} aria-label="Consultar categorias">
+          <label className="erp-field">
+            <span>Buscar</span>
+            <input
+              type="search"
+              value={search}
+              placeholder="Nome da categoria"
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+        </form>
+      )}
+      {items.length > 0 && visible.length === 0 && (
+        <StatePanel kind="empty" message="Nenhuma categoria encontrada para essa busca." />
+      )}
+      {visible.length > 0 && (
         <div className="erp-table-wrap">
           <table className="erp-table">
             <thead>
               <tr><th>Nome</th><th>Categoria pai</th><th>Origem</th>{writable && <th>Ações</th>}</tr>
             </thead>
             <tbody>
-              {items.map((item) => {
+              {visible.map((item) => {
                 const parent = items.find((candidate) => candidate.id === item.parentId);
                 return (
                   <tr key={item.id}>

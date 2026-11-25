@@ -29,6 +29,11 @@ test("lista categorias cadastradas e cria subcategoria", async () => {
   const cafes = await screen.findByRole("row", { name: /Cafés/ });
   expect(cafes.textContent).toContain("Bebidas");
   expect(screen.getAllByRole("row").some((row) => row.textContent?.includes("Bebidas") && row.textContent?.includes("Mercos"))).toBe(true);
+  await userEvent.type(screen.getByRole("searchbox", { name: "Buscar" }), "Caf");
+  const filtered = screen.getAllByRole("row").filter((row) => row.querySelector("td"));
+  expect(filtered).toHaveLength(1);
+  expect(filtered[0]?.textContent).toContain("Cafés");
+  await userEvent.clear(screen.getByRole("searchbox", { name: "Buscar" }));
   await userEvent.type(screen.getByRole("textbox", { name: "Nome *" }), "Chás");
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Categoria pai" }), "10");
   await userEvent.click(screen.getByRole("button", { name: "Criar categoria" }));

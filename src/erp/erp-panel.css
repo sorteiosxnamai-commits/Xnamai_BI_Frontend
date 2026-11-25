@@ -752,10 +752,22 @@
   border-radius: 14px;
   background: var(--bg-elevated);
 }
+.erp-modal-wide {
+  width: min(920px, 100%);
+}
+.erp-modal .erp-form.erp-card {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
 .erp-modal header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
+}
+.erp-modal header p {
+  margin: 4px 0 0;
 }
 .erp-modal h3 {
   margin: 0;
