@@ -183,12 +183,57 @@ export const productDetailSchema = productSchema.extend({
   length: money,
   imageHashes: z.array(z.string()).nullable().optional(),
   notes: nstr,
-  cost: z.null().optional(),
+  description: nstr,
+  photos: z.array(z.string()).optional(),
+  videos: z.array(z.string()).optional(),
+  supplierCode: nstr,
+  barcode: nstr,
+  lot: nstr,
+  receivedAt: nstr,
+  packKind: nstr,
+  cost: money,
+  stockLocation: nstr,
+  mercosGeolocation: z.null().optional(),
   variants: z.array(
     obj({ id: nstr, code: nstr, name: nstr, externalStock: money, price: money }),
   ),
 });
 export type ProductDetail = z.infer<typeof productDetailSchema>;
+
+export const categorySchema = obj({
+  id: z.string(),
+  name: z.string(),
+  parentId: nstr,
+  active: z.boolean().nullable().optional(),
+  localOnly: z.boolean().optional(),
+  ...metaShape,
+});
+export type Category = z.infer<typeof categorySchema>;
+
+export const categoryListSchema = obj({ items: z.array(categorySchema) });
+
+export const productHistorySchema = obj({
+  mercosGeolocation: z.null().optional(),
+  mercosGeolocationNote: nstr,
+  dimensionsSource: nstr,
+  dimensionsNote: nstr,
+  orders: z.array(obj({
+    orderId: z.string(),
+    number: nstr,
+    issuedAt: nstr,
+    status: nstr,
+    quantity: money,
+    total: money,
+  })),
+  movements: z.array(obj({
+    id: z.number(),
+    kind: z.string(),
+    quantityDelta: money,
+    occurredAt: nstr,
+    reason: nstr,
+    warehouseId: z.number(),
+  })),
+});
 
 export const productPricesSchema = obj({
   items: z.array(

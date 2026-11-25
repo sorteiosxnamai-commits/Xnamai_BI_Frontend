@@ -248,6 +248,7 @@ test("menu na ordem do plano, permissões e Configurações como destino das tel
   const nav = within(screen.getByRole("navigation", { name: "Navegação principal" }));
   expect(nav.getAllByRole("link").map((link) => link.textContent)).toEqual([
     "Produtos",
+    "Categoria",
     "Visão Geral",
     "Pedidos",
     "Nota Fiscal",
@@ -266,7 +267,7 @@ test("operador sem permissões extras só vê o que pode usar", () => {
   const names = within(screen.getByRole("navigation", { name: "Navegação principal" }))
     .getAllByRole("link")
     .map((link) => link.textContent);
-  expect(names).toEqual(["Produtos", "Visão Geral", "Pedidos", "Configurações"]);
+  expect(names).toEqual(["Produtos", "Categoria", "Visão Geral", "Pedidos", "Configurações"]);
 });
 
 test("busca do cabeçalho leva a Pedidos com o termo e mantém o período", async () => {

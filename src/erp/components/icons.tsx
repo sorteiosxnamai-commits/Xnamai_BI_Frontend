@@ -18,7 +18,8 @@ export type IconName =
   | "plus"
   | "edit"
   | "user"
-  | "package";
+  | "package"
+  | "folder";
 
 const PATHS: Record<IconName, string> = {
   home: "M3 11 12 3l9 8M5 10v10h5v-6h4v6h5V10",
@@ -40,6 +41,7 @@ const PATHS: Record<IconName, string> = {
   edit: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0",
   package: "M3 7l9-4 9 4-9 4-9-4M3 7v10l9 4 9-4V7M12 11v10",
+  folder: "M3 7h6l2 2h10v10H3z",
 };
 
 /** Ícones simples de traço único; decorativos (aria-hidden) porque sempre acompanham texto. */

@@ -20,6 +20,9 @@ const CustomerDetailPage = lazyPage(() =>
 const ProductsPage = lazyPage(() =>
   import("./features/products/ProductsPage").then((m) => ({ default: m.ProductsPage })),
 );
+const CategoriesPage = lazyPage(() =>
+  import("./features/categories/CategoriesPage").then((m) => ({ default: m.CategoriesPage })),
+);
 const ProductDetailPage = lazyPage(() =>
   import("./features/products/ProductDetailPage").then((m) => ({ default: m.ProductDetailPage })),
 );
@@ -130,6 +133,7 @@ function Shell() {
             <Route path="/erp/clientes" element={<CustomersPage />} />
             <Route path="/erp/clientes/:id" element={<CustomerDetailPage />} />
             <Route path="/erp/produtos" element={<ProductsPage />} />
+            <Route path="/erp/categorias" element={<CategoriesPage />} />
             <Route path="/erp/produtos/novo" element={<ProductCreatePage />} />
             <Route path="/erp/produtos/:id" element={<ProductDetailPage />} />
             <Route path="/erp/cadastros" element={<CatalogsPage />} />

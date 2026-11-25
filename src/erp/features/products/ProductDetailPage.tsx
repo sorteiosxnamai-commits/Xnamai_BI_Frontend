@@ -1,11 +1,11 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useErpQuery } from "../../api/hooks";
-import { productDetailSchema, productPricesSchema } from "../../api/schemas";
+import { productDetailSchema, productHistorySchema, productPricesSchema } from "../../api/schemas";
 import { useErp } from "../../auth/context";
 import { OperationTracker } from "../../components/OperationTracker";
 import { StatePanel } from "../../components/StatePanel";
 import { Badge, CapabilityNotice, Dl, PageHeader } from "../../components/ui";
-import { formatInstant, formatMoney, formatQuantity } from "../../format";
+import { formatDay, formatInstant, formatMoney, formatQuantity } from "../../format";
 import { ProductEditor, ProductPhoto } from "./ProductForm";
 
 export function ProductDetailPage() {
@@ -15,6 +15,7 @@ export function ProductDetailPage() {
   const seeded = (location.state as { operationId?: string } | null)?.operationId ?? null;
   const query = useErpQuery(["product", id], `/products/${encodeURIComponent(id)}`, productDetailSchema);
   const prices = useErpQuery(["product", id, "prices"], `/products/${encodeURIComponent(id)}/prices`, productPricesSchema);
+  const history = useErpQuery(["product", id, "history"], `/products/${encodeURIComponent(id)}/history`, productHistorySchema);
 
   if (query.isLoading) return <StatePanel kind="loading" />;
   if (query.error) {
@@ -53,7 +54,15 @@ export function ProductDetailPage() {
                 ["Preço de tabela", formatMoney(product.listPrice)],
                 ["Preço mínimo", formatMoney(product.minimumPrice)],
                 ["Estoque", formatQuantity(product.externalStock)],
+                ["Quantidade", product.packKind === "box" ? "Caixa" : product.packKind === "unit" ? "Unitário" : "—"],
+                ["Preço de compra", formatMoney(product.cost)],
+                ["Código do fornecedor", product.supplierCode],
+                ["Código de barras", product.barcode],
+                ["Lote", product.lot],
+                ["Data de entrada", formatDay(product.receivedAt)],
+                ["Local no estoque", product.stockLocation],
                 ["NCM", product.ncm],
+                ["Descrição", product.description],
                 ["Mercos", product.onMercos ? "Marcado" : "Não marcado"],
                 ["Situação", product.active === false ? <Badge value="cancelled" label="Inativo" /> : <Badge value="active" label="Ativo" />],
               ]}
@@ -63,6 +72,10 @@ export function ProductDetailPage() {
       </div>
       <section className="erp-card">
         <h3>Logística</h3>
+        <p className="erp-muted">
+          Peso e dimensões vêm do espelho do Mercos. Este ERP não consulta a Tray.
+          O cadastro do Mercos não traz geolocalização; o local no estoque é o campo informado aqui.
+        </p>
         <Dl
           items={[
             ["Peso bruto", formatQuantity(product.grossWeight)],
@@ -96,6 +109,57 @@ export function ProductDetailPage() {
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+      <section className="erp-card">
+        <h3>Histórico do produto</h3>
+        <p className="erp-muted">Pedidos em que o produto entrou e movimentos da gestão de estoque.</p>
+        {history.isLoading && <StatePanel kind="loading" />}
+        {history.error && <StatePanel kind="error" message={(history.error as Error).message} onRetry={() => void history.refetch()} />}
+        {history.data && (
+          <>
+            <h4>Pedidos</h4>
+            {history.data.orders.length === 0 ? (
+              <StatePanel kind="empty" message="Nenhum pedido com este produto." />
+            ) : (
+              <div className="erp-table-wrap">
+                <table className="erp-table">
+                  <thead><tr><th>Pedido</th><th>Data</th><th>Situação</th><th className="num">Quantidade</th><th className="num">Total</th></tr></thead>
+                  <tbody>
+                    {history.data.orders.map((order) => (
+                      <tr key={`${order.orderId}-${order.issuedAt ?? ""}`}>
+                        <td><Link to={`/erp/pedidos/${encodeURIComponent(order.orderId)}`}>{order.number ?? order.orderId}</Link></td>
+                        <td>{formatDay(order.issuedAt)}</td>
+                        <td>{order.status ?? "—"}</td>
+                        <td className="num">{formatQuantity(order.quantity)}</td>
+                        <td className="num">{formatMoney(order.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <h4>Gestão de estoque</h4>
+            {history.data.movements.length === 0 ? (
+              <StatePanel kind="empty" message="Nenhum movimento de estoque para este produto." />
+            ) : (
+              <div className="erp-table-wrap">
+                <table className="erp-table">
+                  <thead><tr><th>Quando</th><th>Tipo</th><th className="num">Quantidade</th><th>Motivo</th></tr></thead>
+                  <tbody>
+                    {history.data.movements.map((movement) => (
+                      <tr key={movement.id}>
+                        <td>{formatInstant(movement.occurredAt)}</td>
+                        <td>{movement.kind}</td>
+                        <td className="num">{formatQuantity(movement.quantityDelta)}</td>
+                        <td>{movement.reason ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </section>
       <section className="erp-card">

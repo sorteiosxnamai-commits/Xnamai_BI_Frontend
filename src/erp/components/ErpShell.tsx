@@ -13,6 +13,7 @@ type NavItem = { to: string; label: string; icon: IconName; permission?: string;
 /** Menu principal, na ordem do plano. Permissão ausente = visível a todo operador com acesso ao ERP. */
 export const MAIN_NAV: NavItem[] = [
   { to: "/erp/produtos", label: "Produtos", icon: "package" },
+  { to: "/erp/categorias", label: "Categoria", icon: "folder" },
   { to: "/erp", label: "Visão Geral", icon: "home", end: true },
   { to: "/erp/pedidos", label: "Pedidos", icon: "orders" },
   { to: "/erp/notas-fiscais", label: "Nota Fiscal", icon: "invoice", permission: "invoices:read" },
